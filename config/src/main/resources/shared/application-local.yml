@@ -1,0 +1,17 @@
+services:
+  hosts:
+    task: http://localhost:8082
+    gateway: http://localhost:7777
+    auth: http://localhost:8089
+  ports:
+    task: 8082
+    gateway: 7777
+    auth: 8089
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        user-info-uri: ${services.hosts.auth}/internal/user-info
+        jwt:
+          issuer-uri: http://localhost:8089

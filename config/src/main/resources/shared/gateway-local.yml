@@ -1,0 +1,27 @@
+server:
+  port: ${services.ports.gateway}
+
+spring:
+  application:
+    name: gateway
+
+  cloud:
+    gateway:
+      restricted-paths:
+        - /api/v1/[a-zA-Z]+/internal/.*
+      global-filter:
+        - LoggingGlobalFilter
+        - RestrictedPathFilter
+      routes:
+        - id: task-route
+          uri: ${services.hosts.task}
+          predicates:
+            - Path=/api/v1/task/**
+          filters:
+            - RewritePath=/api/v1/task/(?<remaining>.*), /api/v1/task/${remaining}
+        - id: auth-route
+          uri: ${services.hosts.auth}
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - RewritePath=/api/v1/auth(?<remaining>/?.*), /${remaining}

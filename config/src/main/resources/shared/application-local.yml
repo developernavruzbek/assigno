@@ -3,10 +3,12 @@ services:
     task: http://localhost:8082
     gateway: http://localhost:7777
     auth: http://localhost:8089
+    organization: http://localhost:8080
   ports:
     task: 8082
     gateway: 7777
     auth: 8089
+    organization: 8080
 
 spring:
   security:

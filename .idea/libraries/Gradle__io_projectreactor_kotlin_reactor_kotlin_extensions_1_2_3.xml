@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="Gradle: io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.3" type="java-imported" external-system-id="GRADLE">
+    <properties groupId="io.projectreactor.kotlin" artifactId="reactor-kotlin-extensions" version="1.2.3" baseVersion="1.2.3" />
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.projectreactor.kotlin/reactor-kotlin-extensions/1.2.3/dcfc1a3c65a6c0b71767377d3ee614cfbe821541/reactor-kotlin-extensions-1.2.3.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

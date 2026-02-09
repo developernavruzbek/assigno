@@ -1,25 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <bytecodeTargetLevel target="1.6" />
-  </component>
-  <component name="JavacSettings">
-    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="auth" options="-parameters" />
-      <module name="auth.main" options="-parameters" />
-      <module name="auth.test" options="-parameters" />
-      <module name="config" options="-parameters" />
-      <module name="config.main" options="-parameters" />
-      <module name="config.test" options="-parameters" />
-      <module name="gateway" options="-parameters" />
-      <module name="gateway.main" options="-parameters" />
-      <module name="gateway.test" options="-parameters" />
-      <module name="organization" options="-parameters" />
-      <module name="organization.main" options="-parameters" />
-      <module name="organization.test" options="-parameters" />
-      <module name="task" options="-parameters" />
-      <module name="task.main" options="-parameters" />
-      <module name="task.test" options="-parameters" />
-    </option>
+    <bytecodeTargetLevel target="1.6">
+      <module name="auth" target="17" />
+      <module name="auth.main" target="17" />
+      <module name="auth.test" target="17" />
+      <module name="config.main" target="17" />
+      <module name="config.test" target="17" />
+      <module name="gateway.main" target="17" />
+      <module name="gateway.test" target="17" />
+      <module name="organization" target="17" />
+      <module name="organization.main" target="17" />
+      <module name="organization.test" target="17" />
+      <module name="task" target="17" />
+      <module name="task.main" target="17" />
+      <module name="task.test" target="17" />
+    </bytecodeTargetLevel>
   </component>
 </project>

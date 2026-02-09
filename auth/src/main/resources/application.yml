@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: auth
+  cloud:
+    config:
+      uri: ${CONFIG_URI:http://localhost:8888}
+  config:
+    import: 'configserver:'
+  profiles:
+    active: local

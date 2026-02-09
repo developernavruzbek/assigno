@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel target="1.6" />
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="auth" options="-parameters" />
+      <module name="auth.main" options="-parameters" />
+      <module name="auth.test" options="-parameters" />
+      <module name="config" options="-parameters" />
+      <module name="config.main" options="-parameters" />
+      <module name="config.test" options="-parameters" />
+      <module name="gateway" options="-parameters" />
+      <module name="gateway.main" options="-parameters" />
+      <module name="gateway.test" options="-parameters" />
+      <module name="organization" options="-parameters" />
+      <module name="organization.main" options="-parameters" />
+      <module name="organization.test" options="-parameters" />
+      <module name="task" options="-parameters" />
+      <module name="task.main" options="-parameters" />
+      <module name="task.test" options="-parameters" />
+    </option>
+  </component>
+</project>

@@ -69,7 +69,7 @@ data class EmployeeCreateRequest(
 data class EmployeeUpdateRequest(
     val userId:Long?,
     val organizationId:Long?,
-    val position:String?
+    val position: Position?
 )
 
 

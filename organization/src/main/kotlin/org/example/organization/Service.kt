@@ -138,8 +138,8 @@ class EmployeeServiceImpl(
                     employee.organization = organization
                 }
             }
-            if (!position.isNullOrBlank()) {
-                employee.position = position
+            if (position != null) {
+                    employee.position = position
             }
         }
         employeeRepository.save(employee)

@@ -1,7 +1,6 @@
 package org.example.organization
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import jakarta.persistence.Column
 
 data class BaseMessage(
     val code: Long? = null,
@@ -63,14 +62,14 @@ data class OrganizationResponse(
 data class EmployeeCreateRequest(
     val userId:Long,
     val organizationId:Long,
-    val position:String
+    val position: Position
 )
 
 //todo boshqattan korib chiqish kerak
 data class EmployeeUpdateRequest(
     val userId:Long?,
     val organizationId:Long?,
-    val position:String?
+    val position: Position?
 )
 
 
@@ -80,7 +79,7 @@ data class EmployeeResponseOrganization(
     val fullName:String,
     val phoneNumber:String,
     val age:Long,
-    val position:String
+    val position: Position
 )
 
 data class EmployeeResponse(
@@ -88,5 +87,5 @@ data class EmployeeResponse(
     val userId:Long,
     val organizationId:Long,
     val organizationName:String,
-    val position:String
+    val position: Position
 )

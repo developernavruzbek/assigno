@@ -8,5 +8,11 @@ enum class ErrorCodes(val code: Long) {
     FOLLOW_ALREADY_EXISTS(108),
     ORGANIZATION_PHONE_NUMBER_ALREADY_EXISTS(202),
     FOLLOW_NOT_FOUND(205),
-    EMPLOYEE_NOT_FOUND(104),
+    EMPLOYEE_NOT_FOUND(111),
+}
+
+enum class Position {
+    ORG_ADMIN,
+    ORG_MANAGER,
+    ORG_EMPLOYEE
 }

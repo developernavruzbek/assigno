@@ -7,7 +7,7 @@
       </configuration>
     </facet>
     <facet external-system-id="GRADLE" type="kotlin-language" name="Kotlin">
-      <configuration version="5" platform="JVM 17" allPlatforms="JVM [17]" useProjectSettings="false" pureKotlinSourceFolders="$MODULE_DIR$/../../organization/src/test/kotlin;/home/navzruzbek/IdeaProjects/work/microservice/assigno/organization/src/main/kotlin">
+      <configuration version="5" platform="JVM 17" allPlatforms="JVM [17]" useProjectSettings="false" pureKotlinSourceFolders="$MODULE_DIR$/../../organization/src/main/kotlin;/Users/mukarit/Documents/Projects/assigno/organization/src/test/kotlin">
         <additionalVisibleModuleNames>organization:main</additionalVisibleModuleNames>
         <compilerSettings>
           <option name="additionalArguments" value="-java-parameters -Xjsr305=strict" />
@@ -57,9 +57,9 @@
     <content url="file://$MODULE_DIR$/../../organization/src/test">
       <sourceFolder url="file://$MODULE_DIR$/../../organization/src/test/kotlin" isTestSource="true" />
     </content>
-    <orderEntry type="jdk" jdkName="17" jdkType="JavaSDK" />
+    <orderEntry type="jdk" jdkName="temurin-17" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="organization.main" />
+    <orderEntry type="module" module-name="org.example.organization.main" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-reflect:1.9.25" level="project" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-stdlib:1.9.25" level="project" />
     <orderEntry type="library" name="Gradle: io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.3" level="project" />

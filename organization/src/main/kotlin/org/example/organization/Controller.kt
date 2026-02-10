@@ -51,12 +51,15 @@ class EmployeeController(
     @DeleteMapping("/{employeeId}")
     fun delete(@PathVariable employeeId: Long) = employeeService.delete(employeeId)
 
-/*
     @GetMapping("/organization/{organizationId}")
-    fun getEmployeesOrganization(@PathVariable organizationId: Long) = employeeService.getAllOrganization(organizationId)
+    fun getEmployeesOrganization(@PathVariable organizationId: Long) =
+        employeeService.getAllEmployeesByOrganization(organizationId)
 
- */
+    @GetMapping("/organization/{organizationId}/simple")
+    fun getEmployeesOrganizationSimple(@PathVariable organizationId: Long) =
+        employeeService.getAllByOrganizationId(organizationId)
 
     @PostMapping("/change")
-    fun changeCurrentOrg(@RequestBody changeCurrentOrganizationRequest: ChangeCurrentOrganizationRequest) = employeeService.changeCurrentOrg(changeCurrentOrganizationRequest)
+    fun changeCurrentOrg(@RequestBody changeCurrentOrganizationRequest: ChangeCurrentOrganizationRequest) =
+        employeeService.changeCurrentOrg(changeCurrentOrganizationRequest)
 }

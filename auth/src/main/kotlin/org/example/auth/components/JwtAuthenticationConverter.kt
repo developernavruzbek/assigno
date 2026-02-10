@@ -19,7 +19,7 @@ class JwtAuthenticationConverter(
 
     override fun convert(source: Jwt): JwtAuthenticationToken {
 
-        // 1) Header bo‘lsa undan ol
+
         val userDetailsJson = getHeader(USER_DETAILS_HEADER_KEY)?.decompress()
         val userDetails = userDetailsJson?.run {
             objectMapper.readValue(this, UserInfoResponse::class.java)
@@ -27,14 +27,14 @@ class JwtAuthenticationConverter(
 
         val username = userDetails?.username ?: source.getUsername()
         val role = userDetails?.role ?: source.getClaim("rol")
-        val currentOrgId = userDetails?.currentOrgId ?: source.getClaim("coid")  // ⭐ MUHIM QO‘SHILDI
+        val currentOrgId = userDetails?.currentOrgId ?: source.getClaim("coid")
 
         val authorities = mutableListOf<SimpleGrantedAuthority>()
         authorities.add(SimpleGrantedAuthority("ROLE_${role}"))
 
         val token = JwtAuthenticationToken(source, authorities, username)
 
-        // 2) context.ga user info qo‘shib qo‘yamiz
+
         val contextUser = UserInfoResponse(
             id = source.getClaim("uid"),
             username = username,
@@ -43,7 +43,7 @@ class JwtAuthenticationConverter(
             role = role
         )
 
-        token.details = contextUser   // ⭐ MUHIM
+        token.details = contextUser
 
         return token
     }

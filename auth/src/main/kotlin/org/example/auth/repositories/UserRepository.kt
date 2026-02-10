@@ -7,4 +7,5 @@ interface UserRepository : BaseRepository<User> {
     fun findByUsername(username: String): User?
     fun existsByUsername(username: String): Boolean
     fun existsByPhoneNumber(phoneNumber: String): Boolean
+    fun findByPhoneNumber(phoneNumber: String) :User?
 }

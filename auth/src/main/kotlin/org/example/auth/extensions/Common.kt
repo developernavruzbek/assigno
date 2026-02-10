@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.security.oauth2.jwt.Jwt
 import org.example.auth.constants.*
+import org.springframework.security.core.context.SecurityContextHolder
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.UnsupportedEncodingException
@@ -137,4 +138,14 @@ fun String.compress(): String {
 fun String.decompress(): String {
     val bytes = Base64.getDecoder().decode(this)
     return GZIPInputStream(ByteArrayInputStream(bytes)).bufferedReader(Charsets.UTF_8).use { it.readText() }
+}
+
+
+fun currentUserId(): Long? {
+    val auth = SecurityContextHolder.getContext().authentication
+    val principal = auth.principal
+
+    return if (principal is Jwt) {
+        (principal.claims[JWT_USER_ID_KEY] as? Number)?.toLong()
+    } else null
 }

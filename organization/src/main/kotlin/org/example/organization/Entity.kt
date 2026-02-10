@@ -3,6 +3,8 @@ package org.example.organization
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EntityListeners
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -45,5 +47,5 @@ class Employee(
     @Column(nullable = false) var accountId:Long,
     @ManyToOne
     var organization: Organization,
-    @Column var position:String
+    @Enumerated(EnumType.STRING) @Column var position: Position
 ): BaseEntity()

@@ -1,7 +1,9 @@
 package org.example.organization
 
+import feign.FeignException
 import org.springframework.context.i18n.LocaleContextHolder
 import org.springframework.context.support.ResourceBundleMessageSource
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -12,6 +14,19 @@ class ExceptionHandler(private val errorMessageSource: ResourceBundleMessageSour
     @ExceptionHandler(DemoExceptionHandler::class)
     fun handleAccountException(exception: DemoExceptionHandler): ResponseEntity<BaseMessage> {
         return ResponseEntity.badRequest().body(exception.getErrorMessage(errorMessageSource))
+    }
+
+    @ExceptionHandler(FeignClientException::class)
+    fun handleFeignClientException(exception: FeignClientException): ResponseEntity<BaseMessage> {
+        val status = if (exception.httpStatus in 400..599) exception.httpStatus else HttpStatus.BAD_REQUEST.value()
+        return ResponseEntity.status(status).body(BaseMessage(exception.code, exception.message))
+    }
+
+    @ExceptionHandler(FeignException::class)
+    fun handleRawFeignException(exception: FeignException): ResponseEntity<BaseMessage> {
+        val status = if (exception.status() in 400..599) exception.status() else HttpStatus.BAD_REQUEST.value()
+        val message = exception.message ?: "Downstream service error"
+        return ResponseEntity.status(status).body(BaseMessage(null, message))
     }
 }
 sealed class DemoExceptionHandler() : RuntimeException() {

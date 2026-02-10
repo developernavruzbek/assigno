@@ -10,3 +10,9 @@ enum class ErrorCodes(val code: Long) {
     FOLLOW_NOT_FOUND(205),
     EMPLOYEE_NOT_FOUND(111),
 }
+
+enum class Position {
+    ORG_ADMIN,
+    ORG_MANAGER,
+    ORG_EMPLOYEE
+}

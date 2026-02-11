@@ -1,5 +1,6 @@
 package org.example.organization
 
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -15,20 +16,25 @@ class OrganizationController(
     private val organizationService: OrganizationService
 ) {
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     fun getAll() = organizationService.getAll()
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     fun create(@RequestBody organizationCreateRequest: OrganizationCreateRequest) =
         organizationService.create(organizationCreateRequest)
 
     @GetMapping("/{orgId}")
+    @PreAuthorize("hasRole('ADMIN')")
     fun getOne(@PathVariable orgId: Long) = organizationService.getOne(orgId)
 
     @PutMapping("/{orgId}")
+    @PreAuthorize("hasRole('ADMIN')")
     fun update(@PathVariable orgId: Long, @RequestBody organizationUpdateRequest: OrganizationUpdateRequest) =
         organizationService.update(orgId, organizationUpdateRequest)
 
     @DeleteMapping("/{orgId}")
+    @PreAuthorize("hasRole('ADMIN')")
     fun delete(@PathVariable orgId: Long) = organizationService.delete(orgId)
 }
 
@@ -38,6 +44,7 @@ class EmployeeController(
     private val employeeService: EmployeeService
 ) {
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     fun create(@RequestBody employeeCreateRequest: EmployeeCreateRequest) =
         employeeService.create(employeeCreateRequest)
 
@@ -45,6 +52,7 @@ class EmployeeController(
     fun getOne(@PathVariable employeeId: Long) = employeeService.getOne(employeeId)
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     fun getAll() = employeeService.getAll()
 
     @PutMapping("/{employeeId}")
@@ -66,4 +74,11 @@ class EmployeeController(
     @PostMapping("/change")
     fun changeCurrentOrg(@RequestBody changeCurrentOrganizationRequest: ChangeCurrentOrganizationRequest) =
         employeeService.changeCurrentOrg(changeCurrentOrganizationRequest)
+
+
+    @PostMapping("/get-emp")
+    fun getEmp(@RequestBody empRequest: EmpRequest) = employeeService.getEmp(empRequest)
+
+    @PostMapping("/get-employee")
+    fun getEmp2(@RequestBody empRequest: EmpRequest) = employeeService.getEmp2(empRequest)
 }

@@ -43,20 +43,30 @@ class ResourceServerConfig(
 
 
     fun jwtAuthenticationConverter(): Converter<Jwt, JwtAuthenticationToken> {
-        return Converter<Jwt, JwtAuthenticationToken> { source ->
-            source
+        return Converter { source ->
             val userDetailsJson = getHeader(USER_DETAILS_HEADER_KEY)?.decompress()
-            val userDetails = userDetailsJson?.run { objectMapper.readValue(this, UserInfoResponse::class.java) }
+            val userDetails = userDetailsJson
+                ?.let { objectMapper.readValue(it, UserInfoResponse::class.java) }
+
             val username = userDetails?.username ?: username()
             val authorities = mutableListOf<SimpleGrantedAuthority>()
-            if (userDetails != null) {
+
+            // 1) FEIGN HEADER → kelgan bo‘lsa
+            if (userDetails?.role != null) {
                 authorities.add(SimpleGrantedAuthority("ROLE_${userDetails.role}"))
+            }
+
+            // 2) TOKEN ichidagi ROLE → fallback
+            val tokenRole = source.getClaim<String>(ROLE_KEY)
+            if (!tokenRole.isNullOrBlank()) {
+                authorities.add(SimpleGrantedAuthority("ROLE_$tokenRole"))
             }
             JwtAuthenticationToken(source, authorities, username).apply {
                 details = userDetails
             }
         }
     }
+
 }
 
 

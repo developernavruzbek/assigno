@@ -108,13 +108,15 @@ open class UserServiceImpl(
     override fun update(userId: Long, userUpdate: UserUpdate) {
         val admin = userRepository.findByIdAndDeletedFalse(currentUserId()!!)
         println("Admin bor ")
-
+/*
         if (userId!=currentUserId())
              throw ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot update this user")
 
         if (admin!!.role!= Role.ADMIN)
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot update this user")
 
+
+ */
         userRepository.findByIdAndDeletedFalse(userId)?.let { user->
                     println("User bor")
                 userUpdate.fullName?.let{

@@ -83,6 +83,8 @@ interface EmployeeService{
     fun getAllByOrganizationId(organizationId: Long): List<EmployeeResponse>
     fun delete(id: Long)
     fun changeCurrentOrg(changeCurrentOrganizationRequest: ChangeCurrentOrganizationRequest)
+    fun getEmp(empRequest: EmpRequest): EmpResponse
+    fun getEmp2(empRequest: EmpRequest): EmpResponse
 }
 
 @Service
@@ -137,9 +139,9 @@ class EmployeeServiceImpl(
             .map { employeeMapper.toDto(it) }
 
     override fun getAllEmployeesByOrganization(orgId: Long): List<EmployeeResponseOrganization> {
-        getActiveOrganization(orgId)
 
-        val employees = employeeRepository.findAllByOrganization(orgId)
+
+        val employees = employeeRepository.findAllByOrganization( getActiveOrganization(orgId))
         if (employees.isEmpty()) return emptyList()
 
         val userIds = employees.map { it.accountId }
@@ -152,7 +154,8 @@ class EmployeeServiceImpl(
 
     override fun getAllByOrganizationId(organizationId: Long): List<EmployeeResponse> {
         getActiveOrganization(organizationId)
-        return employeeRepository.findAllByOrganization(organizationId).map { employeeMapper.toDto(it) }
+        return employeeRepository.findAllByOrganization(   getActiveOrganization(organizationId)
+        ).map { employeeMapper.toDto(it) }
     }
 
     override fun delete(id: Long) {
@@ -167,6 +170,35 @@ class EmployeeServiceImpl(
         if (employeeRepository.existsByAccountIdAndOrganization(user.id, organization)) {
             userClient.changeCurrentOrg(changeCurrentOrganizationRequest)
         }
+    }
+
+    override fun getEmp(empRequest: EmpRequest): EmpResponse {
+        val org = organizationRepository.findByIdAndActive(empRequest.orgId, true)
+            ?:throw OrganizationNotFoundException()
+
+        val emp = employeeRepository.findByAccountIdAndOrganization(empRequest.userId, org)
+                              ?:throw EmployeeNotFoundException()
+
+        return EmpResponse(
+            id  = emp.id!!,
+            userId = emp.accountId,
+            orgId = emp.organization.id!!,
+            position = emp.position
+        )
+    }
+
+    override fun getEmp2(empRequest: EmpRequest): EmpResponse {
+        val organization = organizationRepository.findByIdAndActive(empRequest.orgId, true)
+        val emp = employeeRepository.findByIdAndOrganization(empRequest.userId, organization!!)
+               ?:throw EmployeeNotFoundException()
+
+
+        return EmpResponse(
+            id  = emp.id!!,
+            userId = emp.accountId,
+            orgId = emp.organization.id!!,
+            position = emp.position
+        )
     }
 
     /** private helper **/

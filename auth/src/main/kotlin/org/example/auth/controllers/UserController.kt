@@ -11,6 +11,7 @@ import org.example.auth.model.requests.UserCreateRequest
 import org.example.auth.models.requests.UserUpdate
 import org.example.auth.models.requests.UserUpdateRequest
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 
@@ -36,5 +37,8 @@ class UserController(
 
     @PutMapping("/{userId}")
     fun update(@PathVariable userId:Long, @RequestBody userUpdate: UserUpdate)  = userService.update(userId, userUpdate)
+
+    @DeleteMapping("/{userId}")
+    fun delete(@PathVariable userId:Long) = userService.delete(userId)
 }
 

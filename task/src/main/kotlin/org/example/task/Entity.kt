@@ -95,7 +95,7 @@ class Board(
     @Column(nullable = false)
     var active: Boolean,
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
     @JoinTable(
         name = "board_states",
         joinColumns = [JoinColumn(name = "board_id")],

@@ -39,7 +39,7 @@ class RegisteredClientLoader(
                 .clientSettings(ClientSettings.builder().build())
                 .tokenSettings(
                     TokenSettings.builder()
-                        .accessTokenTimeToLive(Duration.ofMinutes(2))
+                        .accessTokenTimeToLive(Duration.ofMinutes(30))
                         .refreshTokenTimeToLive(Duration.ofHours(6))
                         .build()
                 )

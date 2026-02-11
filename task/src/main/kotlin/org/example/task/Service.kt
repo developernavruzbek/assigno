@@ -1,6 +1,8 @@
 package org.example.task
 
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.web.server.ResponseStatusException
 
 
 interface ProjectService {
@@ -18,13 +20,20 @@ class ProjectServiceImpl(
     private val projectMapper: ProjectMapper,
     private val boardRepository: BoardRepository,
     private val taskRepository: TaskRepository,
-    private val accountTaskRepository: AccountTaskRepository
+    private val accountTaskRepository: AccountTaskRepository,
+    private val organizationClient: OrganizationClient
 ) : ProjectService {
 
     override fun create(request: ProjectCreateRequest): ProjectResponse {
-        // TODO: check EMP POSITION = ADMIN or MANAGER
-        val orgId = currentOrgId() ?: throw OrganizationDidNotFoundException("Organization not found")
 
+        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+
+        if (emp.position=="ORG_EMPLOYEE")
+            throw ForbiddenException("Forbidden")
+
+
+
+        val orgId = currentOrgId() ?: throw OrganizationDidNotFoundException("Organization not found")
         if (projectRepository.existsByNameAndOrganizationId(request.name, orgId))
             throw ProjectAlreadyExistsException("Project already exists with name: ${request.name}")
 
@@ -37,7 +46,6 @@ class ProjectServiceImpl(
     }
 
     override fun getById(projectId: Long): ProjectResponse {
-        // TODO: check EMP POSITION = ADMIN
         return projectMapper.toDto(getByIdOrThrow(projectId))
     }
 
@@ -46,17 +54,18 @@ class ProjectServiceImpl(
             ?: throw ProjectNotFoundException("Project not found")
 
     override fun getByOrgId(orgId: Long): List<ProjectResponse> =
-        // TODO: check EMP POSITION = ADMIN
         projectRepository.findAllByOrganizationIdAndDeletedFalse(orgId)
             .map(projectMapper::toDto)
 
     override fun getAll(): List<ProjectResponse> =
-        // TODO: check EMP POSITION = ADMIN or MANAGER
         projectRepository.findAllByDeletedFalse()
             .map(projectMapper::toDto)
 
     override fun update(projectId: Long, dto: ProjectUpdateRequest): ProjectResponse {
-        // TODO: check EMP POSITION = ADMIN or MANAGER
+        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+        if (emp.position=="ORG_EMPLOYEE")
+            throw ForbiddenException("Forbidden")
+
         val project = getByIdOrThrow(projectId)
 
         dto.name?.let { project.name = it }
@@ -66,6 +75,13 @@ class ProjectServiceImpl(
     }
 
     override fun delete(projectId: Long): Boolean {
+
+        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+
+        if (emp.position=="ORG_EMPLOYEE")
+            throw ForbiddenException("Forbidden")
+
+
         val project = getByIdOrThrow(projectId)
 
         val boards = boardRepository.findAllByProjectIdAndDeletedFalse(projectId)
@@ -114,7 +130,8 @@ class BoardServiceImpl(
     private val taskStateService: TaskStateService,
     private val taskStateMapper: TaskStateMapper,
     private val taskRepository: TaskRepository,
-    private val accountTaskRepository: AccountTaskRepository
+    private val accountTaskRepository: AccountTaskRepository,
+    private val organizationClient: OrganizationClient
     ) : BoardService {
 
     override fun create(request: BoardCreateRequest): BoardResponse {
@@ -131,11 +148,9 @@ class BoardServiceImpl(
     }
 
     override fun getById(boardId: Long): BoardResponse =
-        // TODO: check EMP POSITION = ADMIN or MANAGER
         boardMapper.toDto(getByIdOrThrow(boardId))
 
     override fun getAll(): List<BoardResponse> =
-        // TODO: check EMP POSITION = ADMIN or MANAGER
         boardRepository.findAllNotDeleted()
             .map(boardMapper::toDto)
 
@@ -152,7 +167,12 @@ class BoardServiceImpl(
     }
 
     override fun update(boardId: Long, request: BoardUpdateRequest): BoardResponse {
-        // TODO: check EMP POSITION = ADMIN or MANAGER
+        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+
+        if (emp.position=="ORG_EMPLOYEE")
+            throw ForbiddenException("Forbidden")
+
+
         val board = getByIdOrThrow(boardId)
 
         request.name?.let { board.name = it }
@@ -164,6 +184,12 @@ class BoardServiceImpl(
     }
 
     override fun delete(boardId: Long): Boolean {
+        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+
+        if (emp.position=="ORG_EMPLOYEE")
+            throw ForbiddenException("Forbidden")
+
+
         val board = getByIdOrThrow(boardId)
 
         deleteBoardWithChildren(board)
@@ -232,9 +258,9 @@ class TaskStateServiceImpl(
         val board = boardRepository.findByIdAndDeletedFalse(boardId)
             ?: throw BoardNotFoundException("Board not found with id: $boardId")
 
-        val taskState = buildAndCheck(request)
+        val saved = taskStateRepository.saveAndRefresh(buildAndCheck(request))
 
-        board.taskStates.add(taskState)
+        board.taskStates.add(saved)
 
         val savedBoard = boardRepository.save(board)
 
@@ -268,7 +294,7 @@ class TaskStateServiceImpl(
 
         taskStateRepository.save(taskState)
     }
-
+ // todo    bor stateni biror boardga bog'lash
     override fun delete(id: Long) {
         getByIdOrThrow(id)
         taskStateRepository.trash(id)
@@ -356,14 +382,21 @@ class TaskServiceImpl(
 
     override fun updateState(taskId: Long, request: TaskStateChangeRequest): TaskResponse {
         val task = getByIdOrThrow(taskId)
-        val newState = getStateByCode(request.code)
 
-        validateStateBelongsToBoard(task, newState)
-        task.taskState = newState
+        if (task.ownerAccountId==userId() || accountTaskRepository.existsByTaskIdAndAccountId(taskId, currentOrgId()!!)){
+            val newState = getStateByCode(request.code)
 
-        val saved = taskRepository.save(task)
-        val assigns = accountTaskService.getAccountIdsByTaskId(taskId)
-        return taskMapper.toDto(saved, assigns)
+            validateStateBelongsToBoard(task, newState)
+            task.taskState = newState
+
+            val saved = taskRepository.save(task)
+            val assigns = accountTaskService.getAccountIdsByTaskId(taskId)
+
+            return taskMapper.toDto(saved, assigns)
+        }else{
+            throw ForbiddenException("Forbidden")
+        }
+
     }
 
     override fun delete(taskId: Long): Boolean {
@@ -428,7 +461,8 @@ interface AccountTaskService {
 @Service
 class AccountTaskServiceImpl(
     private val accountTaskRepository: AccountTaskRepository,
-    private val taskRepository: TaskRepository
+    private val taskRepository: TaskRepository,
+    private val organizationClient: OrganizationClient
 ) : AccountTaskService {
     override fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse {
         // TODO: check EMP POSITION = task's owner
@@ -443,6 +477,11 @@ class AccountTaskServiceImpl(
 
         val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
             ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
+        if (task.ownerAccountId!=userId())
+            throw ForbiddenException("You can't assign, you aren't task owner")
+
+         //organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
+         organizationClient.getEmp2(EmpRequest(request.accountId, currentOrgId()!!))
 
         if (accountTaskRepository.existsByTaskIdAndAccountId(request.taskId, request.accountId))
             throw AccountAlreadyAssignedException("Account ${request.accountId} is already assigned to task ${request.taskId}")
@@ -468,4 +507,11 @@ class AccountTaskServiceImpl(
 
         accountTaskRepository.trash(entity.id!!)
     }
+}
+
+fun checkPosition( organizationClient: OrganizationClient){
+    val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+
+    if (emp.position=="ORG_EMPLOYEE")
+        throw ForbiddenException("Forbidden Exception")
 }

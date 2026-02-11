@@ -165,6 +165,18 @@ data class AccountTaskResponse(
 )
 
 
+data class EmpRequest(
+    val userId:Long,
+    val orgId:Long
+)
+
+data class EmpResponse(
+    val id:Long,
+    val userId:Long,
+    val orgId:Long,
+    val position: String
+
+)
 
 /*
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties

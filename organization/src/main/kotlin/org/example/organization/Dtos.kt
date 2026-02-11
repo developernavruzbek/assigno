@@ -121,3 +121,17 @@ data class EmployeeResponse(
     val organizationName: String,
     val position: Position
 )
+
+
+data class EmpRequest(
+    val userId:Long,
+    val orgId:Long
+)
+
+data class EmpResponse(
+    val id:Long,
+    val userId:Long,
+    val orgId:Long,
+    val position: Position
+
+)

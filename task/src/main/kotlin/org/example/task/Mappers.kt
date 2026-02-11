@@ -79,7 +79,6 @@ class TaskStateMapper {
 class AccountTaskMapper {
     fun toDto(accountTask: AccountTask): AccountTaskResponse {
         return AccountTaskResponse(
-            id = accountTask.id!!,
             accountId = accountTask.accountId
         )
     }

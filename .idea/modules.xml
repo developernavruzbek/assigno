@@ -18,11 +18,13 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.gateway.test.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.gateway.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.organization.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.organization.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.organization.main.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.organization.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.organization.main~1.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.organization.main~1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.organization.test.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.organization.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.task.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.task.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.task.test.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.task.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.task.test~1.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.task.test~1.iml" />
       <module fileurl="file://$PROJECT_DIR$/organization/organization.iml" filepath="$PROJECT_DIR$/organization/organization.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/organization.main.iml" filepath="$PROJECT_DIR$/.idea/modules/organization.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/organization.test.iml" filepath="$PROJECT_DIR$/.idea/modules/organization.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/task/task.iml" filepath="$PROJECT_DIR$/task/task.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/task.main.iml" filepath="$PROJECT_DIR$/.idea/modules/task.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/task.test.iml" filepath="$PROJECT_DIR$/.idea/modules/task.test.iml" />

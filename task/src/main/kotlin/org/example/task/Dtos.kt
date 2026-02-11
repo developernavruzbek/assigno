@@ -1,5 +1,6 @@
 package org.example.task
 
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.util.Date
 
@@ -11,28 +12,34 @@ data class UserInfoResponse(
     val role: String,
 )
 
+
 data class ProjectCreateRequest(
     val name:String,
     val description:String
 )
 
-data class ProjectResponse(
-    val id:Long?,
-    val name:String,
-    val description:String,
-    val organizationId:Long
+data class ProjectUpdateRequest(
+    val name:String?,
+    val description:String?
 )
+
+data class ProjectResponse(
+    val id: Long,
+    val name: String,
+    val description: String,
+    val organizationId: Long
+)
+
+
 
 data class BoardCreateRequest(
     val name: String,
-    val code: String,
     val title: String,
     val projectId: Long,
 )
 
 data class BoardUpdateRequest(
     val name: String?,
-    val code: String?,
     val title: String?,
     val active: Boolean?
 )
@@ -40,17 +47,17 @@ data class BoardUpdateRequest(
 data class BoardResponse(
     val id: Long?,
     val name: String,
-    val code: String,
     val title: String,
     val active: Boolean,
-    val projectId: Long
+    val projectId: Long,
+    val taskStates: List<TaskStateResponse>
 )
+
 
 
 data class TaskStateCreateRequest(
     val name: String,
     val code: String,
-    val boardId: Long
 )
 
 data class TaskStateUpdateRequest(
@@ -59,46 +66,54 @@ data class TaskStateUpdateRequest(
 )
 
 data class TaskStateResponse(
-    val id: Long?,
+    val id: Long,
     val name: String,
     val code: String,
-    val boardId: Long
+    val createdAt: Date
 )
 
+data class TaskStateChangeRequest(
+    val code: String,
+)
+
+
 data class TaskCreateRequest(
-    val workerId: Long,
     val name: String,
     val description: String,
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
     val dueDate: Date,
     val priority: Int,
     val boardId: Long,
-    val taskStateId: Long
 )
 
 data class TaskUpdateRequest(
-    val workerId: Long?,
     val name: String?,
     val description: String?,
     val dueDate: Date?,
     val priority: Int?,
-    val taskStateId: Long?
 )
 
 data class TaskResponse(
     val id: Long?,
     val ownerAccountId: Long,
-    val workerId: Long,
     val name: String,
     val description: String,
     val dueDate: Date,
     val priority: Int,
     val boardId: Long,
-    val taskStateId: Long
-)
-data class TaskStateChangeRequest(
-    val taskStateId: Long
+    val taskState: TaskStateResponse,
+    val taskAssigns: MutableList<Long>
 )
 
+
+data class AssignAccountToTaskRequest(
+    val accountId: Long,
+    val taskId: Long
+)
+
+data class AccountTaskResponse(
+    val accountId: Long
+)
 
 
 /*
@@ -247,15 +262,6 @@ fun TaskFile.toResponse() = TaskFileResponse(
     keyName = keyName
 )
 
-data class AssignAccountToTaskRequest(
-    val accountId: Long,
-    val taskId: Long
-)
-
-data class AccountTaskResponse(
-    val id: Long,
-    val accountId: Long
-)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class UserInfoResponse(

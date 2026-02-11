@@ -5,6 +5,8 @@
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-reactor/1.8.1/e15d01225c75a731e8e2aae41dcade5c895249b7/kotlinx-coroutines-reactor-1.8.1.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-reactor/1.8.1/b00ca0662c7742b452e94c7d9e2983562237d322/kotlinx-coroutines-reactor-1.8.1-sources.jar!/" />
+    </SOURCES>
   </library>
 </component>

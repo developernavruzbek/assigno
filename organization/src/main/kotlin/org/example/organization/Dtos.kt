@@ -10,10 +10,10 @@ data class BaseMessage(
 
 data class ChangeCurrentOrganizationRequest(
     @field:NotNull(message = "User ID is required")
-    val userId: Long,
+    var userId: Long,
 
     @field:NotNull(message = "New organization ID is required")
-    val newOrgId: Long
+    var newOrgId: Long
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -89,13 +89,13 @@ data class OrganizationResponse(
 data class EmployeeCreateRequest(
 
     @field:NotNull(message = "User ID is required")
-    val userId: Long,
+    var userId: Long,
 
     @field:NotNull(message = "Organization ID is required")
-    val organizationId: Long,
+    var organizationId: Long,
 
     @field:NotNull(message = "Position is required")
-    val position: Position
+    var position: Position
 )
 
 // todo boshqattan korib chiqish kerak

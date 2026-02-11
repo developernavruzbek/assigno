@@ -81,3 +81,7 @@ class EmployeeNotFoundException : DemoExceptionHandler() {
     override fun errorCode() = ErrorCodes.EMPLOYEE_NOT_FOUND
 }
 
+class EmployeeAlreadyExistsException : DemoExceptionHandler() {
+    override fun errorCode() = ErrorCodes.EMPLOYEE_ALREADY_EXISTS
+}
+

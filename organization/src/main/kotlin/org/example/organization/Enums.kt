@@ -9,6 +9,7 @@ enum class ErrorCodes(val code: Long) {
     ORGANIZATION_PHONE_NUMBER_ALREADY_EXISTS(202),
     FOLLOW_NOT_FOUND(205),
     EMPLOYEE_NOT_FOUND(111),
+    EMPLOYEE_ALREADY_EXISTS(112),
 }
 
 enum class Position {

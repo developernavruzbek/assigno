@@ -96,11 +96,17 @@ class EmployeeServiceImpl(
     @Transactional
     override fun create(employeeCreateRequest: EmployeeCreateRequest) {
         validateUserExists(employeeCreateRequest.userId)
-        val organization = getActiveOrganization(employeeCreateRequest.organizationId)
+        val employee = getEmployee(employeeCreateRequest.userId)
+        if(employee.organization.id==employeeCreateRequest.userId){
+            val organization = getActiveOrganization(employeeCreateRequest.organizationId)
 
-        employeeRepository.save(employeeMapper.toEntity(employeeCreateRequest, organization))
+            employeeRepository.save(employeeMapper.toEntity(employeeCreateRequest, organization))
 
-        userClient.changeCurrentOrg(ChangeCurrentOrganizationRequest(employeeCreateRequest.userId, organization.id!!))
+            userClient.changeCurrentOrg(ChangeCurrentOrganizationRequest(employeeCreateRequest.userId, organization.id!!))
+        }else{
+            throw EmployeeAlreadyExistsException()
+        }
+
     }
 
     override fun getOne(id: Long): EmployeeResponse {

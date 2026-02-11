@@ -15,7 +15,10 @@ interface ProjectService {
 @Service
 class ProjectServiceImpl(
     private val projectRepository: ProjectRepository,
-    private val projectMapper: ProjectMapper
+    private val projectMapper: ProjectMapper,
+    private val boardRepository: BoardRepository,
+    private val taskRepository: TaskRepository,
+    private val accountTaskRepository: AccountTaskRepository
 ) : ProjectService {
 
     override fun create(request: ProjectCreateRequest): ProjectResponse {
@@ -63,10 +66,33 @@ class ProjectServiceImpl(
     }
 
     override fun delete(projectId: Long): Boolean {
-        // TODO: check EMP POSITION = ADMIN
-        getByIdOrThrow(projectId)
-       return projectRepository.trash(projectId)
+        val project = getByIdOrThrow(projectId)
+
+        val boards = boardRepository.findAllByProjectIdAndDeletedFalse(projectId)
+        boards.forEach { board ->
+            deleteBoardDeep(board)      // ❗ yangi funksiya
+        }
+
+        return projectRepository.trash(projectId)
     }
+
+    private fun deleteBoardDeep(board: Board) {
+        // 1. tasklar
+        val tasks = taskRepository.findAllByBoardIdAndDeletedFalse(board.id!!)
+        tasks.forEach { task ->
+            val assigns = accountTaskRepository.findAllByTaskIdAndDeletedFalse(task.id!!)
+            assigns.forEach { accountTaskRepository.trash(it.id!!) }
+            taskRepository.trash(task.id!!)
+        }
+
+        // 2. taskStates — o‘chirilmaydi (default bo‘lishi mumkin)
+        // faqat board detach bo‘ladi
+
+        // 3. board
+        boardRepository.trash(board.id!!)
+    }
+
+    // TODO: check EMP POSITION = ADMIN or MANAGER and projectni boardlari nima bo'ladi ??
 }
 
 
@@ -86,7 +112,9 @@ class BoardServiceImpl(
     private val projectRepository: ProjectRepository,
     private val boardMapper: BoardMapper,
     private val taskStateService: TaskStateService,
-    private val taskStateMapper: TaskStateMapper
+    private val taskStateMapper: TaskStateMapper,
+    private val taskRepository: TaskRepository,
+    private val accountTaskRepository: AccountTaskRepository
     ) : BoardService {
 
     override fun create(request: BoardCreateRequest): BoardResponse {
@@ -136,9 +164,35 @@ class BoardServiceImpl(
     }
 
     override fun delete(boardId: Long): Boolean {
-        // TODO: check EMP POSITION = ADMIN or MANAGER
-        getByIdOrThrow(boardId)
-        return boardRepository.trash(boardId)
+        val board = getByIdOrThrow(boardId)
+
+        deleteBoardWithChildren(board)
+
+        return true
+    }
+    // TODO: check EMP POSITION = ADMIN or MANAGER and boarddagi tasklar statelar nima bo'ladi ??
+
+    private fun deleteBoardWithChildren(board: Board) {
+
+        // 1. delete account tasks
+        val tasks = taskRepository.findAllByBoardIdAndDeletedFalse(board.id!!)
+        tasks.forEach { task ->
+
+            val accountTasks = accountTaskRepository.findAllByTaskIdAndDeletedFalse(task.id!!)
+            accountTasks.forEach { accountTask ->
+                accountTaskRepository.trash(accountTask.id!!)
+            }
+
+            // 2. delete task
+            taskRepository.trash(task.id!!)
+        }
+
+        // 3. DO NOT delete TaskStates (defaultlar ham bor)
+        // Board.taskStates aynan shu boardga tegishli bo‘lgani uchun
+        // detach bo'ladi, lekin o‘chirib yuborilmaydi
+
+        // 4. delete board
+        boardRepository.trash(board.id!!)
     }
 
     private fun getByIdOrThrow(boardId: Long): Board =
@@ -220,8 +274,6 @@ class TaskStateServiceImpl(
         taskStateRepository.trash(id)
     }
 
-    // stateni boarddan o'chirish methodi kerak
-
     private fun buildAndCheck(request: TaskStateCreateRequest): TaskState {
         if (taskStateRepository.existsByNameAndDeletedFalse(request.name))
             throw TaskStateNotFoundException("TaskState with this name already exists")
@@ -256,7 +308,8 @@ class TaskServiceImpl(
     private val boardRepository: BoardRepository,
     private val taskStateRepository: TaskStateRepository,
     private val taskMapper: TaskMapper,
-    private val accountTaskService: AccountTaskServiceImpl
+    private val accountTaskService: AccountTaskServiceImpl,
+    private val accountTaskRepository: AccountTaskRepository
 ) : TaskService {
     override fun create(request: TaskCreateRequest): TaskResponse {
         val board = getBoard(request.boardId)
@@ -314,9 +367,14 @@ class TaskServiceImpl(
     }
 
     override fun delete(taskId: Long): Boolean {
-        getByIdOrThrow(taskId)
-        return taskRepository.trash(taskId)
+        val task = getByIdOrThrow(taskId)
+
+        val assigns = accountTaskRepository.findAllByTaskIdAndDeletedFalse(task.id!!)
+        assigns.forEach { accountTaskRepository.trash(it.id!!) }
+
+        return taskRepository.trash(task.id!!)
     }
+
 
     /**  PRIVATE HELPER  **/
     private fun applyUpdates(task: Task, request: TaskUpdateRequest) {

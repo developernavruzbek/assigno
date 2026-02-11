@@ -31,13 +31,13 @@ class OrganizationServiceImpl(
     }
 
     @Transactional
-    override fun update(id: Long, req: OrganizationUpdateRequest) {
+    override fun update(id: Long, organizationUpdateRequest: OrganizationUpdateRequest) {
         val org = getActiveOrganization(id)
 
-        req.name?.let { org.name = it }
-        req.tagline?.let { org.tagline = it }
-        req.address?.let { org.address = it }
-        req.phoneNumber?.let { org.phoneNumber = it }
+        organizationUpdateRequest.name?.let { org.name = it }
+        organizationUpdateRequest.tagline?.let { org.tagline = it }
+        organizationUpdateRequest.address?.let { org.address = it }
+        organizationUpdateRequest.phoneNumber?.let { org.phoneNumber = it }
 
         organizationRepository.save(org)
     }
@@ -94,13 +94,13 @@ class EmployeeServiceImpl(
 ) : EmployeeService {
 
     @Transactional
-    override fun create(req: EmployeeCreateRequest) {
-        validateUserExists(req.userId)
-        val organization = getActiveOrganization(req.organizationId)
+    override fun create(employeeCreateRequest: EmployeeCreateRequest) {
+        validateUserExists(employeeCreateRequest.userId)
+        val organization = getActiveOrganization(employeeCreateRequest.organizationId)
 
-        employeeRepository.save(employeeMapper.toEntity(req, organization))
+        employeeRepository.save(employeeMapper.toEntity(employeeCreateRequest, organization))
 
-        userClient.changeCurrentOrg(ChangeCurrentOrganizationRequest(req.userId, organization.id!!))
+        userClient.changeCurrentOrg(ChangeCurrentOrganizationRequest(employeeCreateRequest.userId, organization.id!!))
     }
 
     override fun getOne(id: Long): EmployeeResponse {
@@ -109,19 +109,19 @@ class EmployeeServiceImpl(
     }
 
     @Transactional
-    override fun update(id: Long, req: EmployeeUpdateRequest) {
+    override fun update(id: Long, employeeUpdateRequest: EmployeeUpdateRequest) {
         val employee = getEmployee(id)
 
-        req.userId?.takeIf { it != 0L }?.let {
+        employeeUpdateRequest.userId?.takeIf { it != 0L }?.let {
             validateUserExists(it)
             employee.accountId = it
         }
 
-        req.organizationId?.takeIf { it != 0L }?.let {
+        employeeUpdateRequest.organizationId?.takeIf { it != 0L }?.let {
             employee.organization = getActiveOrganization(it)
         }
 
-        req.position?.let { employee.position = it }
+        employeeUpdateRequest.position?.let { employee.position = it }
 
         employeeRepository.save(employee)
     }
@@ -144,9 +144,9 @@ class EmployeeServiceImpl(
         }
     }
 
-    override fun getAllByOrganizationId(orgId: Long): List<EmployeeResponse> {
-        getActiveOrganization(orgId)
-        return employeeRepository.findAllByOrganization(orgId).map { employeeMapper.toDto(it) }
+    override fun getAllByOrganizationId(organizationId: Long): List<EmployeeResponse> {
+        getActiveOrganization(organizationId)
+        return employeeRepository.findAllByOrganization(organizationId).map { employeeMapper.toDto(it) }
     }
 
     override fun delete(id: Long) {
@@ -154,12 +154,12 @@ class EmployeeServiceImpl(
         employeeRepository.trash(id)
     }
 
-    override fun changeCurrentOrg(req: ChangeCurrentOrganizationRequest) {
-        val user = validateUserExists(req.userId)
-        val organization = getActiveOrganization(req.newOrgId)
+    override fun changeCurrentOrg(changeCurrentOrganizationRequest: ChangeCurrentOrganizationRequest) {
+        val user = validateUserExists(changeCurrentOrganizationRequest.userId)
+        val organization = getActiveOrganization(changeCurrentOrganizationRequest.newOrgId)
 
         if (employeeRepository.existsByAccountIdAndOrganization(user.id, organization)) {
-            userClient.changeCurrentOrg(req)
+            userClient.changeCurrentOrg(changeCurrentOrganizationRequest)
         }
     }
 

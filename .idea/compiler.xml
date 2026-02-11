@@ -25,6 +25,7 @@
       <module name="org.example.organization" target="17" />
       <module name="org.example.organization.main" target="17" />
       <module name="org.example.organization.main~1" target="17" />
+      <module name="org.example.organization.main~2" target="17" />
       <module name="org.example.organization.test" target="17" />
       <module name="org.example.task" target="17" />
       <module name="org.example.task.test" target="17" />
@@ -51,6 +52,7 @@
       <module name="org.example.organization" options="-parameters" />
       <module name="org.example.organization.main" options="-parameters" />
       <module name="org.example.organization.main~1" options="-parameters" />
+      <module name="org.example.organization.main~2" options="-parameters" />
       <module name="org.example.organization.test" options="-parameters" />
       <module name="org.example.task" options="-parameters" />
       <module name="org.example.task.test" options="-parameters" />

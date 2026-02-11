@@ -6,7 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/../../auth/.gradle" />
       <excludeFolder url="file://$MODULE_DIR$/../../auth/build" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="temurin-17" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

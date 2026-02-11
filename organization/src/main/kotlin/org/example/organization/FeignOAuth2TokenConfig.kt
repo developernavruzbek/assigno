@@ -68,5 +68,6 @@ class FeignErrorDecoder(private val objectMapper: ObjectMapper) : ErrorDecoder {
     }
 }
 
-class FeignClientException(val code: Long?, override val message: String, val httpStatus: Int) : RuntimeException(message)
+class FeignClientException(val code: Long?, override val message: String, val httpStatus: Int) :
+    RuntimeException(message)
 

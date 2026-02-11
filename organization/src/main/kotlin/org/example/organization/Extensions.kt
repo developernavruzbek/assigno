@@ -38,6 +38,7 @@ fun String.decompress(): String {
     val bytes = Base64.getDecoder().decode(this)
     return GZIPInputStream(ByteArrayInputStream(bytes)).bufferedReader(Charsets.UTF_8).use { it.readText() }
 }
+
 /*
 fun username(): String {
     return getUserJwtPrincipal()?.claims?.get(USERNAME_KEY) as String
@@ -51,7 +52,6 @@ fun username(): String {
         ?: jwt.claims["preferred_username"]?.toString()
         ?: jwt.subject ?: "unknown"
 }
-
 
 
 fun userId(): String? {

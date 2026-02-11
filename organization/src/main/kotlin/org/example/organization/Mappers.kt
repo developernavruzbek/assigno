@@ -10,7 +10,7 @@ class OrganizationMapper{
             return Organization(
                 name  = name ,
                 tagline = tagline,
-                code  = "code",
+                code  = "code", // codes generate ??
                 address = address,
                 phoneNumber = phoneNumber,
                 active = true

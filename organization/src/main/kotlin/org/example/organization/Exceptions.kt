@@ -29,6 +29,7 @@ class ExceptionHandler(private val errorMessageSource: ResourceBundleMessageSour
         return ResponseEntity.status(status).body(BaseMessage(null, message))
     }
 }
+
 sealed class DemoExceptionHandler() : RuntimeException() {
     abstract fun errorCode(): ErrorCodes
     open fun getArguments(): Array<Any?>? = null
@@ -55,25 +56,27 @@ class OrganizationNotFoundException : DemoExceptionHandler() {
 }
 
 
-class OrganizationAlreadyExistsException(): DemoExceptionHandler(){
+class OrganizationAlreadyExistsException() : DemoExceptionHandler() {
     override fun errorCode() = ErrorCodes.ORGANIZATION_ALREADY_EXISTS
 
 }
-class OrganizationPhoneNumberAlreadyExistsException(): DemoExceptionHandler() {
+
+class OrganizationPhoneNumberAlreadyExistsException() : DemoExceptionHandler() {
     override fun errorCode() = ErrorCodes.ORGANIZATION_PHONE_NUMBER_ALREADY_EXISTS
 }
 
-class PasswordIsIncorrect: DemoExceptionHandler(){
+class PasswordIsIncorrect : DemoExceptionHandler() {
     override fun errorCode() = ErrorCodes.PASSWORD_IS_INCORRECT
 }
 
-class  FollowAlreadyExistsException(): DemoExceptionHandler(){
+class FollowAlreadyExistsException() : DemoExceptionHandler() {
     override fun errorCode() = ErrorCodes.FOLLOW_ALREADY_EXISTS
 }
 
-class FollowNotFoundException():DemoExceptionHandler(){
+class FollowNotFoundException() : DemoExceptionHandler() {
     override fun errorCode() = ErrorCodes.FOLLOW_NOT_FOUND
 }
+
 class EmployeeNotFoundException : DemoExceptionHandler() {
     override fun errorCode() = ErrorCodes.EMPLOYEE_NOT_FOUND
 }

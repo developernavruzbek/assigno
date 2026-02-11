@@ -50,16 +50,17 @@ class BaseRepositoryImpl<T : BaseEntity>(
         return save(t).apply { entityManager.refresh(this) }
     }
 }
+
 @Repository
-interface OrganizationRepository : BaseRepository<Organization>{
-    fun findByNameAndActive(name:String, active:Boolean): Organization?
+interface OrganizationRepository : BaseRepository<Organization> {
+    fun findByNameAndActive(name: String, active: Boolean): Organization?
     fun findByPhoneNumberAndActive(phoneNumber: String, active: Boolean): Organization?
     fun findByIdAndActive(id: Long, active: Boolean): Organization?
 
 }
 
 @Repository
-interface EmployeeRepository: BaseRepository<Employee>{
+interface EmployeeRepository : BaseRepository<Employee> {
 
     fun countByOrganization(organization: Organization): Long
     fun findAllByOrganization(organization: Long): List<Employee>

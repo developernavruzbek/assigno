@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: file-service
+
+  cloud:
+    config:
+      uri: ${CONFIG_URI:http://localhost:8888}
+      password: ${CONFIG_PASSWORD:nimadirxavfsizlik}
+
+  config:
+    import: 'configserver:'
+
+  profiles:
+    active: local
+
+file:
+  upload-dir: uploads
+  max-size: 10485760 # 10MB

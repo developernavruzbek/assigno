@@ -23,29 +23,58 @@ import java.util.Date
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener::class)
 class BaseEntity(
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
-    @CreatedDate @Temporal(TemporalType.TIMESTAMP) var createdDate: Date? = null,
-    @LastModifiedDate @Temporal(TemporalType.TIMESTAMP) var modifiedDate: Date? = null,
-    @CreatedBy var createdBy: Long? = null,
-    @LastModifiedBy var lastModifiedBy: Long? = null,
-    @Column(nullable = false) @ColumnDefault(value = "false") var deleted: Boolean = false // (true - o'chirilgan bo'lsa)  (false - o'chirilmagan)
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
+
+    @CreatedDate @Temporal(TemporalType.TIMESTAMP)
+    var createdDate: Date? = null,
+
+    @LastModifiedDate @Temporal(TemporalType.TIMESTAMP)
+    var modifiedDate: Date? = null,
+
+    @CreatedBy
+    var createdBy: Long? = null,
+
+    @LastModifiedBy
+    var lastModifiedBy: Long? = null,
+
+    @Column(nullable = false) @ColumnDefault(value = "false")
+    var deleted: Boolean = false
 )
 
 @Entity
 class Organization(
-    @Column(nullable = false, unique = true) var name:String,
-    var tagline:String,
-    var code:String,
-    var address:String,
-    @Column(nullable = false, unique = true) var phoneNumber:String,
+    @Column(nullable = false, unique = true, length = 150)
+    var name: String,
+
+    @Column(length = 250)
+    var tagline: String,
+
+    @Column(nullable = false, length = 36)
+    var code: String,
+
+    @Column(length = 172)
+    var address: String,
+
+    @Column(nullable = false, unique = true, length = 20)
+    var phoneNumber: String,
+
+    @Column(nullable = false)
     var active: Boolean
-): BaseEntity()
+) : BaseEntity()
+
 
 
 @Entity
 class Employee(
-    @Column(nullable = false) var accountId:Long,
+    @Column(nullable = false)
+    var accountId: Long,
+
     @ManyToOne
     var organization: Organization,
-    @Enumerated(EnumType.STRING) @Column var position: Position
-): BaseEntity()
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    var position: Position
+) : BaseEntity()

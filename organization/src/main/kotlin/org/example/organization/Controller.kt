@@ -13,18 +13,20 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("org")
 class OrganizationController(
     private val organizationService: OrganizationService
-){
+) {
     @GetMapping
     fun getAll() = organizationService.getAll()
 
     @PostMapping
-    fun create(@RequestBody organizationCreateRequest: OrganizationCreateRequest) = organizationService.create(organizationCreateRequest)
+    fun create(@RequestBody organizationCreateRequest: OrganizationCreateRequest) =
+        organizationService.create(organizationCreateRequest)
 
     @GetMapping("/{orgId}")
-    fun getOne(@PathVariable orgId:Long) = organizationService.getOne(orgId)
+    fun getOne(@PathVariable orgId: Long) = organizationService.getOne(orgId)
 
     @PutMapping("/{orgId}")
-    fun update(@PathVariable orgId:Long, @RequestBody organizationUpdateRequest: OrganizationUpdateRequest) = organizationService.update(orgId, organizationUpdateRequest)
+    fun update(@PathVariable orgId: Long, @RequestBody organizationUpdateRequest: OrganizationUpdateRequest) =
+        organizationService.update(orgId, organizationUpdateRequest)
 
     @DeleteMapping("/{orgId}")
     fun delete(@PathVariable orgId: Long) = organizationService.delete(orgId)
@@ -34,18 +36,20 @@ class OrganizationController(
 @RequestMapping("employee")
 class EmployeeController(
     private val employeeService: EmployeeService
-){
+) {
     @PostMapping
-    fun create(@RequestBody employeeCreateRequest: EmployeeCreateRequest) = employeeService.create(employeeCreateRequest)
+    fun create(@RequestBody employeeCreateRequest: EmployeeCreateRequest) =
+        employeeService.create(employeeCreateRequest)
 
     @GetMapping("/{employeeId}")
-    fun getOne(@PathVariable employeeId:Long) =  employeeService.getOne(employeeId)
+    fun getOne(@PathVariable employeeId: Long) = employeeService.getOne(employeeId)
 
     @GetMapping
     fun getAll() = employeeService.getAll()
 
     @PutMapping("/{employeeId}")
-    fun update(@PathVariable employeeId:Long, @RequestBody employeeUpdateRequest: EmployeeUpdateRequest) = employeeService.update(employeeId, employeeUpdateRequest)
+    fun update(@PathVariable employeeId: Long, @RequestBody employeeUpdateRequest: EmployeeUpdateRequest) =
+        employeeService.update(employeeId, employeeUpdateRequest)
 
 
     @DeleteMapping("/{employeeId}")

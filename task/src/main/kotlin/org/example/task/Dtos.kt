@@ -1,6 +1,8 @@
 package org.example.task
 
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import jakarta.validation.constraints.*
 import java.util.Date
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -11,92 +13,155 @@ data class UserInfoResponse(
     val role: String,
 )
 
+
 data class ProjectCreateRequest(
-    val name:String,
-    val description:String
+    @field:NotBlank
+    @field:Size(max = 124)
+    val name: String,
+
+    @field:Size(max = 250)
+    val description: String
+)
+
+data class ProjectUpdateRequest(
+    @field:Size(max = 124)
+    val name: String?,
+
+    @field:Size(max = 250)
+    val description: String?
 )
 
 data class ProjectResponse(
-    val id:Long?,
-    val name:String,
-    val description:String,
-    val organizationId:Long
+    val id: Long,
+    val name: String,
+    val description: String,
+    val organizationId: Long
 )
 
 data class BoardCreateRequest(
+    @field:NotBlank
+    @field:Size(max = 72)
     val name: String,
-    val code: String,
+
+    @field:NotBlank
+    @field:Size(max = 124)
     val title: String,
+
+    @field:Positive
     val projectId: Long,
 )
 
 data class BoardUpdateRequest(
+    @field:Size(max = 72)
     val name: String?,
-    val code: String?,
+
+    @field:Size(max = 124)
     val title: String?,
+
     val active: Boolean?
 )
 
 data class BoardResponse(
     val id: Long?,
     val name: String,
-    val code: String,
     val title: String,
     val active: Boolean,
-    val projectId: Long
+    val projectId: Long,
+    val taskStates: List<TaskStateResponse>
 )
 
 
 data class TaskStateCreateRequest(
+    @field:NotBlank
+    @field:Size(max = 72)
     val name: String,
+
+    @field:NotBlank
+    @field:Size(max = 60)
     val code: String,
-    val boardId: Long
 )
 
 data class TaskStateUpdateRequest(
+    @field:Size(max = 72)
     val name: String?,
+
+    @field:Size(max = 60)
     val code: String?
 )
 
 data class TaskStateResponse(
-    val id: Long?,
+    val id: Long,
     val name: String,
     val code: String,
-    val boardId: Long
+    val createdAt: Date
 )
 
+data class TaskStateChangeRequest(
+    @field:NotBlank
+    @field:Size(max = 60)
+    val code: String,
+)
+
+
+
 data class TaskCreateRequest(
-    val workerId: Long,
+    @field:NotBlank
+    @field:Size(max = 150)
     val name: String,
+
+    @field:NotBlank
     val description: String,
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
+    @field:FutureOrPresent
     val dueDate: Date,
+
+    @field:Min(1) @field:Max(5)
     val priority: Int,
+
+    @field:Positive
     val boardId: Long,
-    val taskStateId: Long
 )
 
 data class TaskUpdateRequest(
-    val workerId: Long?,
+    @field:Size(max = 150)
     val name: String?,
+
+    @field:Size(max = 2000)
     val description: String?,
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
+    @field:FutureOrPresent
     val dueDate: Date?,
+
+    @field:Min(1) @field:Max(5)
     val priority: Int?,
-    val taskStateId: Long?
 )
+
 
 data class TaskResponse(
     val id: Long?,
     val ownerAccountId: Long,
-    val workerId: Long,
     val name: String,
     val description: String,
     val dueDate: Date,
     val priority: Int,
     val boardId: Long,
-    val taskStateId: Long
+    val taskState: TaskStateResponse,
+    val taskAssigns: MutableList<Long>
 )
-data class TaskStateChangeRequest(
-    val taskStateId: Long
+
+
+data class AssignAccountToTaskRequest(
+    @field:Positive
+    val accountId: Long,
+
+    @field:Positive
+    val taskId: Long
+)
+
+data class AccountTaskResponse(
+    val accountId: Long
 )
 
 
@@ -247,15 +312,6 @@ fun TaskFile.toResponse() = TaskFileResponse(
     keyName = keyName
 )
 
-data class AssignAccountToTaskRequest(
-    val accountId: Long,
-    val taskId: Long
-)
-
-data class AccountTaskResponse(
-    val id: Long,
-    val accountId: Long
-)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class UserInfoResponse(

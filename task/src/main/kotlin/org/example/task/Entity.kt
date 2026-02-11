@@ -9,6 +9,9 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.JoinTable
+import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MappedSuperclass
 import jakarta.persistence.OneToMany
@@ -34,11 +37,20 @@ class BaseEntity(
     @Column(nullable = false) @ColumnDefault(value = "false") var deleted: Boolean = false,
 )
 
+@Entity
+class Project(
+    @Column(unique = true, nullable = false, length = 124)
+    var name: String,
+    @Column(nullable = false)
+    var organizationId: Long,
+    var description: String?
+) : BaseEntity()
+
+
 
 @Entity
 class Task(
     var ownerAccountId: Long,
-    var workerId:Long,
     var name: String,
     var description: String,
     var dueDate: Date,
@@ -47,43 +59,51 @@ class Task(
     var board: Board,
     @ManyToOne(fetch = FetchType.LAZY)
     var taskState: TaskState
-):BaseEntity()
+) : BaseEntity()
 
-@Entity
-class TaskState(
-    var name: String, // New
-    var code: String, // NEW
-    @ManyToOne(fetch = FetchType.LAZY)
-    var board: Board
-):BaseEntity()
 
-@Entity
-class Project(
-    var name: String,
-    var description: String,
-    var organizationId: Long
-):BaseEntity()
 
 @Entity
 class Board(
     var name: String,
-    var code: String,
     var title: String,
     @ManyToOne(fetch = FetchType.LAZY)
     var project: Project,
     var active: Boolean,
-):BaseEntity()
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "board_states",
+        joinColumns = [JoinColumn(name = "board_id")],
+        inverseJoinColumns = [JoinColumn(name = "task_state_id")]
+    )
+    var taskStates: MutableList<TaskState> = mutableListOf()
+) : BaseEntity()
+
+
+
+@Entity
+class TaskState(
+    @Column(nullable = false, unique = true, length = 72)
+    var name: String, // New
+    @Column(nullable = false, unique = true, length = 60)
+    var code: String, // NEW
+) : BaseEntity()
+
+
+
 
 @Entity
 class TaskFile(
     @ManyToOne(fetch = FetchType.LAZY)
-    var taskId: Task,
+    var task: Task,
+    @Column(nullable = false, length = 20)
     var keyName: String
-):BaseEntity()
+) : BaseEntity()
+
 
 @Entity
 class AccountTask(
     var accountId: Long,
     @ManyToOne(fetch = FetchType.LAZY)
     var task: Task
-):BaseEntity()
+) : BaseEntity()

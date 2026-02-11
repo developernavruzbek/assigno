@@ -7,7 +7,7 @@
       </configuration>
     </facet>
     <facet external-system-id="GRADLE" type="kotlin-language" name="Kotlin">
-      <configuration version="5" platform="JVM 17" allPlatforms="JVM [17]" useProjectSettings="false" pureKotlinSourceFolders="$MODULE_DIR$/../../task/src/main/kotlin;/Users/mukarit/Documents/Projects/assigno/task/src/test/kotlin">
+      <configuration version="5" platform="JVM 17" allPlatforms="JVM [17]" useProjectSettings="false" pureKotlinSourceFolders="C:\Users\aaa\IdeaProjects\assigno\task\src\test\kotlin;C:\Users\aaa\IdeaProjects\assigno\task\src\main\kotlin">
         <additionalVisibleModuleNames>task:main</additionalVisibleModuleNames>
         <compilerSettings>
           <option name="additionalArguments" value="-java-parameters -Xjsr305=strict" />
@@ -57,7 +57,7 @@
     <content url="file://$MODULE_DIR$/../../task/src/test">
       <sourceFolder url="file://$MODULE_DIR$/../../task/src/test/kotlin" isTestSource="true" />
     </content>
-    <orderEntry type="jdk" jdkName="temurin-17" jdkType="JavaSDK" />
+    <orderEntry type="jdk" jdkName="corretto-17" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="task.main" />
     <orderEntry type="library" name="Gradle: org.jetbrains.kotlin:kotlin-reflect:1.9.25" level="project" />

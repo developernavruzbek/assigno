@@ -13,6 +13,7 @@ enum class ErrorCodes(val code: Long) {
     FOLLOW_NOT_FOUND(221),
 
     PASSWORD_IS_INCORRECT(230),
+    EMPLOYEE_ALREADY_EXISTS(231)
 }
 
 enum class Position {

@@ -14,7 +14,7 @@ sealed class BaseException(
     override val message: String? = null
     ) : RuntimeException(message)
 
-class OrganizationDidNotFoundException(msg: String) : BaseException(ErrorCode.ORGANIZATION_DID_NOT_FOUND, msg)
+class OrganizationDidNotFoundException(msg: String) : BaseException(ErrorCode.ORGANIZATION_NOT_FOUND, msg)
 
 class TaskNotFoundException(msg: String) : BaseException(ErrorCode.TASK_NOT_FOUND, msg)
 class TaskAlreadyExistsException(msg: String) : BaseException(ErrorCode.TASK_ALREADY_EXISTS, msg)

@@ -1,8 +1,7 @@
 package org.example.task
 
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
+import org.springframework.transaction.annotation.Transactional
 
 
 interface ProjectService {
@@ -24,6 +23,8 @@ class ProjectServiceImpl(
     private val organizationClient: OrganizationClient
 ) : ProjectService {
 
+
+    @Transactional
     override fun create(request: ProjectCreateRequest): ProjectResponse {
 
         val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
@@ -508,7 +509,6 @@ class AccountTaskServiceImpl(
         accountTaskRepository.trash(entity.id!!)
     }
 }
-
 fun checkPosition( organizationClient: OrganizationClient){
     val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
 

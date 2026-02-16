@@ -31,3 +31,9 @@ spring:
             - Path=/api/v1/organization/**
           filters:
             - RewritePath=/api/v1/organization(?<remaining>/?.*), /${remaining}
+        - id: notification-route
+          uri: ${services.hosts.notification}
+          predicates:
+            - Path=/api/v1/notification/**
+          filters:
+            - RewritePath=/api/v1/notification(?<remaining>/?.*), /${remaining}

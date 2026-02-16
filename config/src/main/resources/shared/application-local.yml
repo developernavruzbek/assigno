@@ -4,11 +4,13 @@ services:
     gateway: http://localhost:7777
     auth: http://localhost:8089
     organization: http://localhost:8080
+    notification: http://localhost:8084
   ports:
     task: 8082
     gateway: 7777
     auth: 8089
     organization: 8080
+    notification: 8084
 
 spring:
   security:

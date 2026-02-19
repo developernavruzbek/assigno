@@ -2,7 +2,6 @@ package org.example.notification
 
 import jakarta.transaction.Transactional
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.UUID
@@ -34,10 +33,6 @@ interface NotificationMessageService {
     fun sendBulk(employeeIds: List<Long>, message: String)
 }
 
-interface NotificationRetryService {
-    fun retryFailed()
-}
-
 @Service
 class TelegramSenderImpl(
     private val bot: TelegramBot
@@ -58,7 +53,6 @@ class TelegramSenderImpl(
 class TelegramConnectionServiceImpl(
     private val repo: TelegramConnectionRepository,
     private val employeeClient: EmployeeClient,
-    private val retryService: NotificationRetryService,
     @Value("\${telegram.bot.username}") private val botUsername: String
 ) : TelegramConnectionService {
 
@@ -107,8 +101,6 @@ class TelegramConnectionServiceImpl(
             conn.employeeId,
             TelegramUpdateRequest(chatId, telegramUserId)
         )
-
-        retryService.retryFailed()
     }
 
     override fun getChatId(employeeId: Long): Long? {
@@ -128,65 +120,24 @@ class NotificationMessageServiceImpl(
 
     override fun send(employeeId: Long, message: String) {
 
-        val entity = messageRepo.save(
-            NotificationMessage(
-                employeeId = employeeId,
-                message = message,
-                status = NotificationStatus.PENDING
-            )
-        )
-
-        val chatId = connectionService.getChatId(employeeId)
-
-        if (chatId == null) {
-            entity.status = NotificationStatus.FAILED
-            messageRepo.save(entity)
-            return
-        }
+        val chatId = connectionService.getChatId(employeeId) ?: return
 
         val ok = telegramSender.send(chatId, message)
 
         if (ok) {
-            entity.status = NotificationStatus.SENT
-            entity.sentAt = Instant.now()
-        } else {
-            entity.status = NotificationStatus.FAILED
+            messageRepo.save(
+                NotificationMessage(
+                    employeeId = employeeId,
+                    message = message,
+                    sentAt = Instant.now()
+                )
+            )
         }
-
-        messageRepo.save(entity)
     }
 
     override fun sendBulk(employeeIds: List<Long>, message: String) {
         employeeIds.forEach { employeeId ->
             send(employeeId, message)
-        }
-    }
-}
-
-@Service
-class NotificationRetryServiceImpl(
-    private val repo: NotificationMessageRepository,
-    private val connectionService: TelegramConnectionService,
-    private val sender: TelegramSender
-) : NotificationRetryService {
-
-    @Scheduled(fixedDelay = 60000)
-    override fun retryFailed() {
-
-        val failed = repo.findAllByStatus(NotificationStatus.FAILED)
-
-        failed.forEach { msg ->
-
-            val chatId = connectionService.getChatId(msg.employeeId)
-                ?: return@forEach
-
-            val ok = sender.send(chatId, msg.message)
-
-            if (ok) {
-                msg.status = NotificationStatus.SENT
-                msg.sentAt = Instant.now()
-                repo.save(msg)
-            }
         }
     }
 }

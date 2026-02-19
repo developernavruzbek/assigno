@@ -64,6 +64,4 @@ interface TelegramConnectionRepository : BaseRepository<TelegramConnection> {
     fun findByLinkToken(linkToken: String): TelegramConnection?
 }
 
-interface NotificationMessageRepository : BaseRepository<NotificationMessage> {
-    fun findAllByStatus(status: NotificationStatus): List<NotificationMessage>
-}
+interface NotificationMessageRepository : BaseRepository<NotificationMessage>

@@ -3,8 +3,6 @@ package org.example.notification
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EntityListeners
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -67,9 +65,6 @@ class NotificationMessage(
 
     @Column(length = 2000)
     val message: String,
-
-    @Enumerated(EnumType.STRING)
-    var status: NotificationStatus,
 
     val createdAt: Instant = Instant.now(),
 

@@ -39,7 +39,7 @@ class ProjectController(
         projectService.update(id, request)
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): Boolean =
+    fun delete(@PathVariable id: Long) =
         projectService.delete(id)
 }
 
@@ -78,7 +78,7 @@ class BoardController(
         boardService.update(id, request)
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): Boolean =
+    fun delete(@PathVariable id: Long) =
         boardService.delete(id)
 }
 
@@ -147,7 +147,7 @@ class TaskController(
         taskService.updateState(id, request)
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): Boolean =
+    fun delete(@PathVariable id: Long) =
         taskService.delete(id)
 }
 

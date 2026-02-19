@@ -1,8 +1,13 @@
 package org.example.task
 
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+
+/**
+ *      PROJECT
+ **/
 
 interface ProjectService {
     fun create(request: ProjectCreateRequest): ProjectResponse
@@ -10,40 +15,35 @@ interface ProjectService {
     fun getAll(): List<ProjectResponse>
     fun update(projectId: Long, dto: ProjectUpdateRequest): ProjectResponse
     fun getByOrgId(orgId: Long): List<ProjectResponse>
-    fun delete(projectId: Long): Boolean
+    fun delete(projectId: Long)
 }
 
 @Service
 class ProjectServiceImpl(
     private val projectRepository: ProjectRepository,
     private val projectMapper: ProjectMapper,
-    private val boardRepository: BoardRepository,
-    private val taskRepository: TaskRepository,
-    private val accountTaskRepository: AccountTaskRepository,
+    private val boardService: BoardService,
     private val organizationClient: OrganizationClient
 ) : ProjectService {
 
-
     @Transactional
     override fun create(request: ProjectCreateRequest): ProjectResponse {
-
-        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
-
-        if (emp.position=="ORG_EMPLOYEE")
-            throw ForbiddenException("Forbidden")
-
-
+        checkPosition(organizationClient)
 
         val orgId = currentOrgId() ?: throw OrganizationDidNotFoundException("Organization not found")
-        if (projectRepository.existsByNameAndOrganizationId(request.name, orgId))
-            throw ProjectAlreadyExistsException("Project already exists with name: ${request.name}")
 
-        return Project(
+        val project = Project(
             name = request.name,
             description = request.description,
             organizationId = orgId
-        ).let { projectRepository.save(it) }
-            .let { projectMapper.toDto(it) }
+        )
+
+        try {
+            val saved = projectRepository.save(project)
+            return projectMapper.toDto(saved)
+        } catch (ex: DataIntegrityViolationException) {
+            throw ProjectAlreadyExistsException("Project already exists with name: ${request.name} ex : ${ex.message}")
+        }
     }
 
     override fun getById(projectId: Long): ProjectResponse {
@@ -62,55 +62,40 @@ class ProjectServiceImpl(
         projectRepository.findAllByDeletedFalse()
             .map(projectMapper::toDto)
 
+    @Transactional
     override fun update(projectId: Long, dto: ProjectUpdateRequest): ProjectResponse {
-        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
-        if (emp.position=="ORG_EMPLOYEE")
-            throw ForbiddenException("Forbidden")
+        checkPosition(organizationClient)
 
         val project = getByIdOrThrow(projectId)
 
-        dto.name?.let { project.name = it }
+        if (dto.name != null && dto.name != project.name) {
+            if (projectRepository.existsByNameAndOrganizationIdAndDeletedFalse(dto.name, project.organizationId)) {
+                throw ProjectAlreadyExistsException("Project already exists with name: ${dto.name}")
+            }
+            project.name = dto.name
+        }
+
         dto.description?.let { project.description = it }
 
         return projectMapper.toDto(projectRepository.save(project))
     }
 
-    override fun delete(projectId: Long): Boolean {
+    @Transactional
+    override fun delete(projectId: Long) {
+        checkPosition(organizationClient)
 
-        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+        getByIdOrThrow(projectId)
 
-        if (emp.position=="ORG_EMPLOYEE")
-            throw ForbiddenException("Forbidden")
+        boardService.deleteByProjectId(projectId)
 
-
-        val project = getByIdOrThrow(projectId)
-
-        val boards = boardRepository.findAllByProjectIdAndDeletedFalse(projectId)
-        boards.forEach { board ->
-            deleteBoardDeep(board)      // ❗ yangi funksiya
-        }
-
-        return projectRepository.trash(projectId)
+        projectRepository.trash(projectId)
     }
-
-    private fun deleteBoardDeep(board: Board) {
-        // 1. tasklar
-        val tasks = taskRepository.findAllByBoardIdAndDeletedFalse(board.id!!)
-        tasks.forEach { task ->
-            val assigns = accountTaskRepository.findAllByTaskIdAndDeletedFalse(task.id!!)
-            assigns.forEach { accountTaskRepository.trash(it.id!!) }
-            taskRepository.trash(task.id!!)
-        }
-
-        // 2. taskStates — o‘chirilmaydi (default bo‘lishi mumkin)
-        // faqat board detach bo‘ladi
-
-        // 3. board
-        boardRepository.trash(board.id!!)
-    }
-
-    // TODO: check EMP POSITION = ADMIN or MANAGER and projectni boardlari nima bo'ladi ??
 }
+
+
+/**
+ *      BOARD
+ **/
 
 
 interface BoardService {
@@ -120,7 +105,8 @@ interface BoardService {
     fun getStatesById(boardId: Long): List<TaskStateResponse>
     fun getAll(): List<BoardResponse>
     fun update(boardId: Long, request: BoardUpdateRequest): BoardResponse
-    fun delete(boardId: Long): Boolean
+    fun delete(boardId: Long)
+    fun deleteByProjectId(projectId: Long)
 }
 
 @Service
@@ -133,20 +119,28 @@ class BoardServiceImpl(
     private val taskRepository: TaskRepository,
     private val accountTaskRepository: AccountTaskRepository,
     private val organizationClient: OrganizationClient
-    ) : BoardService {
+) : BoardService {
 
+    @Transactional
     override fun create(request: BoardCreateRequest): BoardResponse {
+        checkPosition(organizationClient)
+
         val project = getProjectOrThrow(request.projectId)
 
-        if (boardRepository.existsByNameAndProjectId(request.name, project.id!!))
-            throw BoardAlreadyExistsException("Board already exists with name: ${request.name}")
+        if (boardRepository.existsByNameAndProjectIdAndDeletedFalse(request.name, project.id!!))
+            throw BoardAlreadyExistsException(
+                "Board already exists with name: ${request.name}"
+            )
 
         val board = boardBuilder(request, project)
-        taskStateService.createDefaultStates(board)
 
-        val saved = boardRepository.saveAndRefresh(board)
-        return boardMapper.toDto(saved)
+        val savedBoard = boardRepository.save(board)
+
+        taskStateService.createDefaultStates(savedBoard)
+
+        return boardMapper.toDto(savedBoard)
     }
+
 
     override fun getById(boardId: Long): BoardResponse =
         boardMapper.toDto(getByIdOrThrow(boardId))
@@ -161,17 +155,15 @@ class BoardServiceImpl(
             .map(boardMapper::toDto)
     }
 
+    @Transactional(readOnly = true)
     override fun getStatesById(boardId: Long): List<TaskStateResponse> {
-        getByIdOrThrow(boardId)
-        return boardRepository.findById(boardId).get()
-            .taskStates.map { taskStateMapper.toDto(it) }        //// todo         for TASK SERVICE
+        val board = getByIdOrThrow(boardId)
+        return board.taskStates.map { taskStateMapper.toDto(it) }
     }
 
+    @Transactional
     override fun update(boardId: Long, request: BoardUpdateRequest): BoardResponse {
-        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
-
-        if (emp.position=="ORG_EMPLOYEE")
-            throw ForbiddenException("Forbidden")
+        checkPosition(organizationClient)
 
 
         val board = getByIdOrThrow(boardId)
@@ -184,41 +176,30 @@ class BoardServiceImpl(
             .let { boardMapper.toDto(it) }
     }
 
-    override fun delete(boardId: Long): Boolean {
-        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
-
-        if (emp.position=="ORG_EMPLOYEE")
-            throw ForbiddenException("Forbidden")
-
+    @Transactional
+    override fun delete(boardId: Long) {
+        checkPosition(organizationClient)
 
         val board = getByIdOrThrow(boardId)
-
-        deleteBoardWithChildren(board)
-
-        return true
+        deepDeleteBoard(board)
     }
-    // TODO: check EMP POSITION = ADMIN or MANAGER and boarddagi tasklar statelar nima bo'ladi ??
 
-    private fun deleteBoardWithChildren(board: Board) {
-
-        // 1. delete account tasks
-        val tasks = taskRepository.findAllByBoardIdAndDeletedFalse(board.id!!)
-        tasks.forEach { task ->
-
-            val accountTasks = accountTaskRepository.findAllByTaskIdAndDeletedFalse(task.id!!)
-            accountTasks.forEach { accountTask ->
-                accountTaskRepository.trash(accountTask.id!!)
-            }
-
-            // 2. delete task
-            taskRepository.trash(task.id!!)
+    @Transactional
+    override fun deleteByProjectId(projectId: Long) {
+        val boards = boardRepository.findAllByProjectIdAndDeletedFalse(projectId)
+        boards.forEach {
+            deepDeleteBoard(it)
         }
+    }
 
-        // 3. DO NOT delete TaskStates (defaultlar ham bor)
-        // Board.taskStates aynan shu boardga tegishli bo‘lgani uchun
-        // detach bo'ladi, lekin o‘chirib yuborilmaydi
+    private fun deepDeleteBoard(board: Board) {
+        val tasks = taskRepository.findAllByBoardIdAndDeletedFalse(board.id!!)
+        if (tasks.isNotEmpty()) {
+            val taskIds = tasks.map { it.id!! }
 
-        // 4. delete board
+            accountTaskRepository.trashAllByTaskIds(taskIds)
+            taskRepository.trashAllByIds(taskIds)
+        }
         boardRepository.trash(board.id!!)
     }
 
@@ -239,6 +220,10 @@ class BoardServiceImpl(
 }
 
 
+/**
+ *      TASK STATE
+ **/
+
 interface TaskStateService {
     fun create(boardId: Long, request: TaskStateCreateRequest): TaskStateResponse
     fun createDefaultStates(board: Board)
@@ -254,39 +239,69 @@ class TaskStateServiceImpl(
     private val taskStateMapper: TaskStateMapper,
     private val boardRepository: BoardRepository
 ) : TaskStateService {
-    // TODO: check EMP POSITION = task's owner
+
+    @Transactional
     override fun create(boardId: Long, request: TaskStateCreateRequest): TaskStateResponse {
         val board = boardRepository.findByIdAndDeletedFalse(boardId)
             ?: throw BoardNotFoundException("Board not found with id: $boardId")
 
-        val saved = taskStateRepository.saveAndRefresh(buildAndCheck(request))
+        validateUniqueness(boardId, request.name, request.code)
 
-        board.taskStates.add(saved)
+        val insertPosition = if (request.prevStateId != null) {
+            val prevState = getByIdOrThrow(request.prevStateId)
+            if (prevState.board.id != boardId) throw BadRequestException("State belongs to another board")
+            prevState.position + 1
+        } else {
+            1
+        }
 
-        val savedBoard = boardRepository.save(board)
+        taskStateRepository.incrementPositions(boardId, insertPosition)
 
-        val savedState = savedBoard.taskStates.last()
+        val state = TaskState(
+            name = request.name,
+            code = request.code,
+            position = insertPosition,
+            board = board
+        )
 
-        return taskStateMapper.toDto(savedState)
+        return taskStateMapper.toDto(taskStateRepository.save(state))
     }
 
+    private fun validateUniqueness(boardId: Long, name: String, code: String) {
+        if (taskStateRepository.existsByNameAndBoardIdAndDeletedFalse(name, boardId))
+            throw TaskStateAlreadyExistsException("Name '$name' already exists in this board")
+
+        if (taskStateRepository.existsByCodeAndBoardIdAndDeletedFalse(code, boardId))
+            throw TaskStateAlreadyExistsException("Code '$code' already exists in this board")
+    }
+
+
+    @Transactional
     override fun createDefaultStates(board: Board) {
-        val defaultStates = taskStateRepository.findDefaultStates() // TODO, IN_PROGRESS, DONE
+        val required = listOf("NEW", "IN_PROGRESS", "REVIEW", "DONE")
 
-        board.taskStates.addAll(defaultStates)
-        boardRepository.save(board)
+        val lastPos = taskStateRepository.findMaxPositionByBoardId(board.id!!) ?: 0
+        var counter = lastPos + 1
+
+        val states = required.map { code ->
+            TaskState(
+                name = code.replace("_", " "),
+                code = code,
+                position = counter++,
+                board = board
+            )
+        }
+        taskStateRepository.saveAll(states)
     }
 
-    override fun getById(id: Long): TaskStateResponse {
-        val taskState = getByIdOrThrow(id)
-        return taskStateMapper.toDto(taskState)
-    }
+    override fun getById(id: Long): TaskStateResponse =
+        taskStateMapper.toDto(getByIdOrThrow(id))
 
-    override fun getAll(): List<TaskStateResponse> {
-        return taskStateRepository.findAllNotDeleted()
-            .map { taskState -> taskStateMapper.toDto(taskState) }
-    }
+    override fun getAll(): List<TaskStateResponse> =
+        taskStateRepository.findAllNotDeleted()
+            .map(taskStateMapper::toDto)
 
+    @Transactional
     override fun update(id: Long, request: TaskStateUpdateRequest) {
         val taskState = getByIdOrThrow(id)
 
@@ -295,29 +310,47 @@ class TaskStateServiceImpl(
 
         taskStateRepository.save(taskState)
     }
- // todo    bor stateni biror boardga bog'lash
+
+    @Transactional
     override fun delete(id: Long) {
-        getByIdOrThrow(id)
+        val state = getByIdOrThrow(id)
+        val boardId = state.board.id!!
+        val deletedPosition = state.position
+
         taskStateRepository.trash(id)
+        taskStateRepository.decrementPositions(boardId, deletedPosition)
     }
 
-    private fun buildAndCheck(request: TaskStateCreateRequest): TaskState {
-        if (taskStateRepository.existsByNameAndDeletedFalse(request.name))
-            throw TaskStateNotFoundException("TaskState with this name already exists")
+    @Transactional
+    fun moveState(stateId: Long, direction: String): TaskStateResponse {
+        val state = getByIdOrThrow(stateId)
+        val boardId = state.board.id!!
 
-        if (taskStateRepository.existsByCodeAndDeletedFalse(request.code))
-            throw TaskStateNotFoundException("TaskState with this name already exists")
+        val neighbor = when (direction.uppercase()) {
+            "UP" -> taskStateRepository.findPrev(boardId, state.position)
+            "DOWN" -> taskStateRepository.findNext(boardId, state.position)
+            else -> throw IllegalArgumentException("Direction must be UP or DOWN")
+        } ?: throw IllegalStateException("Boundary reached: cannot move further in this direction")
 
-        return TaskState(
-            name = request.name,
-            code = request.code,
-        )
+        val currentPos = state.position
+        state.position = neighbor.position
+        neighbor.position = currentPos
+
+        taskStateRepository.save(state)
+        taskStateRepository.save(neighbor)
+
+        return taskStateMapper.toDto(state)
     }
 
     private fun getByIdOrThrow(id: Long): TaskState =
-        taskStateRepository.findByIdAndDeletedFalse(id) ?:
-            throw TaskStateNotFoundException("TaskState not found with id: $id")
+        taskStateRepository.findByIdAndDeletedFalse(id)
+            ?: throw TaskStateNotFoundException("TaskState not found with id: $id")
 }
+
+
+/**
+ *      TASK
+ **/
 
 
 interface TaskService {
@@ -326,29 +359,37 @@ interface TaskService {
     fun getAllByBoardId(boardId: Long): List<TaskResponse>
     fun update(taskId: Long, request: TaskUpdateRequest): TaskResponse
     fun updateState(taskId: Long, request: TaskStateChangeRequest): TaskResponse
-    fun delete(taskId: Long): Boolean
+    fun delete(taskId: Long)
+    fun move(taskId: Long, request: TaskMoveRequest): TaskResponse
 }
 
 @Service
 class TaskServiceImpl(
-    private val taskRepository: TaskRepository,
-    private val boardRepository: BoardRepository,
-    private val taskStateRepository: TaskStateRepository,
     private val taskMapper: TaskMapper,
-    private val accountTaskService: AccountTaskServiceImpl,
+    private val taskRepository: TaskRepository,
+    private val taskStateRepository: TaskStateRepository,
+    private val taskActionService: TaskActionService,
+    private val boardRepository: BoardRepository,
+    private val accountTaskService: AccountTaskService,
     private val accountTaskRepository: AccountTaskRepository
 ) : TaskService {
+
+    @Transactional
     override fun create(request: TaskCreateRequest): TaskResponse {
         val board = getBoard(request.boardId)
         validateTaskUniqueness(request.name, board.id!!)
-        val defaultState = getDefaultState(board)
+        val defaultState = getDefaultState(board.id!!)
 
         val task = buildTask(request, board, defaultState)
         val saved = taskRepository.save(task)
 
-        val assigns = accountTaskService.getAccountIdsByTaskId(saved.id!!)
+        taskActionService.log(
+            task = saved,
+            type = TaskActionType.CREATED,
+            comment = "New Task created"
+        )
 
-        return taskMapper.toDto(saved, assigns)
+        return taskMapper.toDto(saved, mutableListOf())
     }
 
     override fun getById(taskId: Long): TaskResponse {
@@ -362,18 +403,34 @@ class TaskServiceImpl(
             ?: throw TaskNotFoundException("Task not found with id=$taskId")
 
     override fun getAllByBoardId(boardId: Long): List<TaskResponse> {
-        boardRepository.findByIdAndDeletedFalse(boardId)
-            ?: throw BoardNotFoundException("Board not found")
 
-        return taskRepository.findAllByBoardIdAndDeletedFalse(boardId)
-            .map { task ->
-                val assigns = accountTaskService.getAccountIdsByTaskId(task.id!!)
-                taskMapper.toDto(task, assigns)
-            }
+        boardRepository.findByIdAndDeletedFalse(boardId)
+            ?: throw BoardNotFoundException("Board not found with id=$boardId")
+
+        val tasks = taskRepository.findAllByBoardIdAndDeletedFalse(boardId)
+
+        val taskIds = tasks.map { it.id!! }
+
+        val assignsMap = accountTaskRepository
+            .findAllByTaskIdInAndDeletedFalse(taskIds)
+            .groupBy { it.task.id!! }
+            .mapValues { entry -> entry.value.map { it.accountId } }
+
+        return tasks.map { task ->
+            val assigns = assignsMap[task.id] ?: emptyList()
+            taskMapper.toDto(task, assigns.toMutableList())
+        }
     }
 
+    @Transactional
     override fun update(taskId: Long, request: TaskUpdateRequest): TaskResponse {
         val task = getByIdOrThrow(taskId)
+
+        logIfChanged(task, "name", task.name, request.name)
+        logIfChanged(task, "description", task.description, request.description)
+        logIfChanged(task, "dueDate", task.dueDate.toString(), request.dueDate?.toString())
+        logIfChanged(task, "priority", task.priority.toString(), request.priority?.toString())
+
         applyUpdates(task, request)
         val saved = taskRepository.save(task)
 
@@ -381,36 +438,92 @@ class TaskServiceImpl(
         return taskMapper.toDto(saved, assigns)
     }
 
-    override fun updateState(taskId: Long, request: TaskStateChangeRequest): TaskResponse {
-        val task = getByIdOrThrow(taskId)
-
-        if (task.ownerAccountId==userId() || accountTaskRepository.existsByTaskIdAndAccountId(taskId, currentOrgId()!!)){
-            val newState = getStateByCode(request.code)
-
-            validateStateBelongsToBoard(task, newState)
-            task.taskState = newState
-
-            val saved = taskRepository.save(task)
-            val assigns = accountTaskService.getAccountIdsByTaskId(taskId)
-
-            return taskMapper.toDto(saved, assigns)
-        }else{
-            throw ForbiddenException("Forbidden")
+    private fun logIfChanged(task: Task, field: String, oldValue: String?, newValue: String?) {
+        if (newValue != null && oldValue != newValue) {
+            taskActionService.log(
+                task = task,
+                type = TaskActionType.UPDATED,
+                oldValue = "$field:$oldValue",
+                newValue = "$field:$newValue"
+            )
         }
-
     }
 
-    override fun delete(taskId: Long): Boolean {
+    /**
+    POST /tasks/{id}/move/forward
+
+    POST /tasks/{id}/move/backward
+     **/
+    @Transactional
+    override fun move(taskId: Long, request: TaskMoveRequest): TaskResponse {
+
+        val task = getByIdOrThrow(taskId)
+        val boardId = task.board.id!!
+
+        val currentState = task.taskState
+
+        val nextState = when (request.direction) {
+            MoveDirection.FORWARD -> taskStateRepository.findNext(boardId, currentState.position)
+            MoveDirection.BACKWARD -> taskStateRepository.findPrev(boardId, currentState.position)
+        } ?: throw BadRequestException("Invalid move direction for this task")
+
+        val actionType = when (request.direction) {
+            MoveDirection.FORWARD -> TaskActionType.MOVED_FORWARD
+            MoveDirection.BACKWARD -> TaskActionType.MOVED_BACKWARD
+        }
+
+        val oldState = currentState
+
+        task.taskState = nextState
+        val saved = taskRepository.save(task)
+
+        taskActionService.log(
+            task = saved,
+            type = actionType,
+            oldValue = oldState.code,
+            newValue = nextState.code
+        )
+
+        val assigns = accountTaskService.getAccountIdsByTaskId(taskId)
+        return taskMapper.toDto(saved, assigns)
+    }
+
+    @Transactional
+    override fun updateState(taskId: Long, request: TaskStateChangeRequest): TaskResponse {
+        val task = getByIdOrThrow(taskId)
+        val currentUserId = userId()
+
+        val isOwner = task.ownerAccountId == currentUserId
+        val isAssigned = accountTaskRepository.existsByTaskIdAndAccountIdAndDeletedFalse(taskId, currentUserId)
+
+        if (!isOwner && !isAssigned) throw ForbiddenException("You can't change state of this task. Forbidden")
+
+        val newState = taskStateRepository.findByCodeAndBoardIdAndDeletedFalse(request.code, task.board.id!!)
+            ?: throw TaskStateNotFoundException("State not found in this board")
+
+        task.taskState = newState
+        val saved = taskRepository.save(task)
+
+        return taskMapper.toDto(saved, accountTaskService.getAccountIdsByTaskId(taskId))
+    }
+
+    @Transactional
+    override fun delete(taskId: Long) {
         val task = getByIdOrThrow(taskId)
 
         val assigns = accountTaskRepository.findAllByTaskIdAndDeletedFalse(task.id!!)
         assigns.forEach { accountTaskRepository.trash(it.id!!) }
 
-        return taskRepository.trash(task.id!!)
+        taskActionService.log(
+            task = task,
+            type = TaskActionType.DELETED,
+            comment = "Task deleted"
+        )
+
+        taskRepository.trash(task.id!!)
+
     }
 
-
-    /**  PRIVATE HELPER  **/
     private fun applyUpdates(task: Task, request: TaskUpdateRequest) {
 
         request.name?.let { task.name = it }
@@ -424,33 +537,34 @@ class TaskServiceImpl(
             ?: throw BoardNotFoundException("Board not found with id=$boardId")
 
     private fun validateTaskUniqueness(name: String, boardId: Long) {
-        if (taskRepository.existsByNameAndBoardId(name, boardId))
-            throw TaskAlreadyExistsException("Task with name '$name' already exists in this board")
+        if (taskRepository.existsByNameAndBoardIdAndDeletedFalse(name, boardId))
+            throw TaskAlreadyExistsException(
+                "Task with name '$name' already exists in this board"
+            )
     }
 
-    private fun getDefaultState(board: Board): TaskState =
-        board.taskStates.firstOrNull()
-            ?: throw TaskStateNotFoundException("TaskState not found in board id: ${board.id}, name: ${board.name}")
+    private fun getDefaultState(boardId: Long): TaskState =
+        taskStateRepository.findByCodeAndBoardId("NEW", boardId)
+            ?: throw TaskStateNotFoundException(
+                "Default TODO state not found for board $boardId"
+            )
 
     private fun buildTask(request: TaskCreateRequest, board: Board, state: TaskState) = Task(
-            ownerAccountId = userId(),
-            name = request.name,
-            description = request.description,
-            dueDate = request.dueDate,
-            priority = request.priority,
-            board = board,
-            taskState = state
-        )
-
-    private fun getStateByCode(code: String): TaskState =
-        taskStateRepository.findByCodeAndDeletedFalse(code)
-            ?: throw TaskStateNotFoundException("TaskState not found with code=$code")
-
-    private fun validateStateBelongsToBoard(task: Task, newState: TaskState) {
-        if (task.board.taskStates.none { it.code == newState.code })
-            throw TaskStateNotFoundException("State '${newState.code}' does not belong to this task's board")
-    }
+        ownerAccountId = userId(),
+        name = request.name,
+        description = request.description,
+        dueDate = request.dueDate,
+        priority = request.priority,
+        board = board,
+        taskState = state
+    )
 }
+
+
+/**
+ *      ACCOUNT TASK
+ **/
+
 
 interface AccountTaskService {
     fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse
@@ -463,34 +577,48 @@ interface AccountTaskService {
 class AccountTaskServiceImpl(
     private val accountTaskRepository: AccountTaskRepository,
     private val taskRepository: TaskRepository,
+    private val taskActionService: TaskActionService,
     private val organizationClient: OrganizationClient
 ) : AccountTaskService {
-    override fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse {
-        // TODO: check EMP POSITION = task's owner
-        val accountTask = checkAndBuild(request)
-        val saved = accountTaskRepository.save(accountTask)
-        return AccountTaskResponse(
-            accountId = saved.accountId
-        )
-    }
 
-    private fun checkAndBuild(request: AssignAccountToTaskRequest, ): AccountTask {
+    @Transactional
+    override fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse {
+        checkPosition(organizationClient)
 
         val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
             ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
-        if (task.ownerAccountId!=userId())
+
+        if (task.ownerAccountId != userId()) {
+            throw ForbiddenException("You can't disallow account, you aren't the task owner")
+        }
+
+        val accountTask = checkAndBuild(request)
+        val saved = accountTaskRepository.save(accountTask)
+
+        taskActionService.log(
+            task = saved.task,
+            type = TaskActionType.ASSIGNED,
+            newValue = saved.accountId.toString()
+        )
+
+        return AccountTaskResponse(accountId = saved.accountId)
+    }
+
+    private fun checkAndBuild(request: AssignAccountToTaskRequest): AccountTask {
+        val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
+            ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
+
+        if (task.ownerAccountId != userId())
             throw ForbiddenException("You can't assign, you aren't task owner")
 
-         //organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
-         organizationClient.getEmp2(EmpRequest(request.accountId, currentOrgId()!!))
+        organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
 
-        if (accountTaskRepository.existsByTaskIdAndAccountId(request.taskId, request.accountId))
-            throw AccountAlreadyAssignedException("Account ${request.accountId} is already assigned to task ${request.taskId}")
+        if (accountTaskRepository.existsByTaskIdAndAccountIdAndDeletedFalse(request.taskId, request.accountId))
+            throw AccountAlreadyAssignedException(
+                "Account ${request.accountId} is already assigned to task ${request.taskId}"
+            )
 
-        return AccountTask(
-            accountId = request.accountId,
-            task = task
-        )
+        return AccountTask(accountId = request.accountId, task = task)
     }
 
     override fun getAccountIdsByTaskId(taskId: Long): MutableList<Long> =
@@ -501,17 +629,64 @@ class AccountTaskServiceImpl(
     override fun getAllByTaskId(taskId: Long): List<AccountTaskResponse> =
         accountTaskRepository.findAllByTaskIdAndDeletedFalse(taskId)
             .map { AccountTaskResponse(it.accountId) }
-    // TODO: check EMP POSITION = task's owner
+
+    @Transactional
     override fun disallow(taskId: Long, accountId: Long) {
+        checkPosition(organizationClient)
+
+        val task = taskRepository.findByIdAndDeletedFalse(taskId)
+            ?: throw TaskNotFoundException("Task not found with id: $taskId")
+
+        if (task.ownerAccountId != userId()) {
+            throw ForbiddenException("You can't disallow account, you aren't the task owner")
+        }
+
         val entity = accountTaskRepository.findByTaskIdAndAccountIdAndDeletedFalse(taskId, accountId)
             ?: throw AccountTaskNotFoundException("Account $accountId isn't assigned to task $taskId")
+
+        taskActionService.log(
+            task = task,
+            type = TaskActionType.UNASSIGNED,
+            oldValue = accountId.toString()
+        )
 
         accountTaskRepository.trash(entity.id!!)
     }
 }
-fun checkPosition( organizationClient: OrganizationClient){
-    val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
 
-    if (emp.position=="ORG_EMPLOYEE")
-        throw ForbiddenException("Forbidden Exception")
+interface TaskActionService {
+    fun log(
+        task: Task,
+        type: TaskActionType,
+        oldValue: String? = null,
+        newValue: String? = null,
+        comment: String? = null
+    )
+}
+
+@Service
+class TaskActionServiceImpl(
+    private val taskActionRepository: TaskActionRepository
+) : TaskActionService {
+
+    override fun log(task: Task, type: TaskActionType, oldValue: String?, newValue: String?, comment: String?) {
+        val action = TaskAction(
+            task = task,
+            actionType = type,
+            updatedBy = userId(),
+            oldValue = oldValue,
+            newValue = newValue,
+            comment = comment
+        )
+        taskActionRepository.save(action)
+    }
+}
+
+/// controllerga ko'chirish
+private fun checkPosition(organizationClient: OrganizationClient) {
+    val currentUserId = userId()
+    val orgId = currentOrgId() ?: throw OrganizationDidNotFoundException("Org not found or null")
+    val emp = organizationClient.getEmp(EmpRequest(currentUserId, orgId))
+    if (emp.position == "ORG_EMPLOYEE")
+        throw ForbiddenException("You can't do this operation. Forbidden")
 }

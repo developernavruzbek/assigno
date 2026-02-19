@@ -22,7 +22,25 @@ enum class ErrorCode(val code: Int) {
 
     // === TASK STATE ===
     TASK_STATE_NOT_FOUND(450),
+    TASK_STATE_ALREADY_EXISTS(451),
+
 
     // === SECURITY / PERMISSIONS ===
     FORBIDDEN_EXCEPTION(460),
+    BAD_REQUEST(461)
 }
+
+enum class TaskActionType {
+    CREATED,
+    UPDATED,
+    MOVED_FORWARD,
+    MOVED_BACKWARD,
+    ASSIGNED,
+    UNASSIGNED,
+    DELETED
+}
+
+enum class MoveDirection {
+    FORWARD, BACKWARD
+}
+

@@ -35,11 +35,24 @@ class BoardMapper(
     }
 }
 
+@Component
+class TaskStateMapper {
+
+    fun toDto(taskState: TaskState): TaskStateResponse {
+        taskState.run {
+            return TaskStateResponse(
+                id = id!!,
+                name = name,
+                code = code,
+                createdAt = createdDate!!
+            )
+        }
+    }
+}
 
 @Component
 class TaskMapper(
     private val taskStateMapper: TaskStateMapper,
-    private val accountTaskMapper: AccountTaskMapper
 ) {
 
     fun toDto(task: Task, accountTasks: MutableList<Long>): TaskResponse {
@@ -60,20 +73,6 @@ class TaskMapper(
 }
 
 
-@Component
-class TaskStateMapper {
-
-    fun toDto(taskState: TaskState): TaskStateResponse {
-        taskState.run {
-            return TaskStateResponse(
-                id = id!!,
-                name = name,
-                code = code,
-                createdAt = createdDate!!
-            )
-        }
-    }
-}
 
 @Component
 class AccountTaskMapper {

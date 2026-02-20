@@ -38,3 +38,26 @@ data class UserBatchRequest(
     val userIds: List<Long>
 )
 
+data class EmpRequest(
+    val userId:Long,
+    val orgId:Long
+)
+
+data class EmpResponse(
+    val id:Long,
+    val userId:Long,
+    val orgId:Long,
+    val position: String
+
+)
+
+data class AccountTaskResponse(
+    val accountId: Long
+)
+
+
+data class ActionRequest(
+    val taskId:Long,
+    val content:String
+)
+

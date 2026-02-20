@@ -61,9 +61,11 @@ class BaseRepositoryImpl<T : BaseEntity>(
 }
 
 interface TelegramConnectionRepository : BaseRepository<TelegramConnection> {
-    fun findByLinkToken(linkToken: String): TelegramConnection?
+    fun findByEmployeeId(employeeId: Long): TelegramConnection?
+    fun findByLinkToken(token: String): TelegramConnection?
+    fun findAllByEmployeeIdIn(ids: List<Long>): List<TelegramConnection>
 }
 
-interface NotificationMessageRepository : BaseRepository<NotificationMessage> {
-    fun findAllByStatus(status: NotificationStatus): List<NotificationMessage>
-}
+
+
+interface NotificationMessageRepository : BaseRepository<NotificationMessage>

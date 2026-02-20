@@ -1,5 +1,6 @@
 server:
   port: ${services.ports.notification}
+
 spring:
   application:
     name: notification
@@ -18,3 +19,8 @@ spring:
       ddl-auto: update
 
     show-sql: true
+
+telegram:
+  bot:
+    username: assigno_notification_bot
+    token: 8522580813:AAGh4hxNLZFt7RVVRsyLvYdxxtYjuaHen0Y

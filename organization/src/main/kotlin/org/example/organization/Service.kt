@@ -98,6 +98,14 @@ class EmployeeServiceImpl(
     @Transactional
     override fun create(employeeCreateRequest: EmployeeCreateRequest) {
         validateUserExists(employeeCreateRequest.userId)
+        println("User bor===================")
+        val activeOrganization = getActiveOrganization(employeeCreateRequest.organizationId)
+        if (employeeRepository.existsByAccountIdAndOrganization(employeeCreateRequest.userId, activeOrganization)) {
+            throw EmployeeAlreadyExistsException()
+        }
+        employeeRepository.save(employeeMapper.toEntity(employeeCreateRequest, activeOrganization))
+        userClient.changeCurrentOrg(ChangeCurrentOrganizationRequest(employeeCreateRequest.userId, activeOrganization.id!!))
+        /*
         val employee = getEmployee(employeeCreateRequest.userId)
         if(employee.organization.id==employeeCreateRequest.userId){
             val organization = getActiveOrganization(employeeCreateRequest.organizationId)
@@ -108,6 +116,8 @@ class EmployeeServiceImpl(
         }else{
             throw EmployeeAlreadyExistsException()
         }
+
+         */
 
     }
 
@@ -189,7 +199,7 @@ class EmployeeServiceImpl(
 
     override fun getEmp2(empRequest: EmpRequest): EmpResponse {
         val organization = organizationRepository.findByIdAndActive(empRequest.orgId, true)
-        val emp = employeeRepository.findByIdAndOrganization(empRequest.userId, organization!!)
+        val emp = employeeRepository.findByAccountIdAndOrganization(empRequest.userId, organization!!)
                ?:throw EmployeeNotFoundException()
 
 

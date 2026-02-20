@@ -1,100 +1,35 @@
 package org.example.notification
 
-import jakarta.transaction.Transactional
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import java.time.Instant
 import java.util.UUID
 
-
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage
-
-interface TelegramSender {
-    fun send(chatId: Long, text: String): Boolean
-}
-
-interface TelegramConnectionService {
-
-    fun generateLinkToken(employeeId: Long): String
-
-    fun getTelegramLink(employeeId: Long): String
-
-    fun linkTelegram(
-        token: String,
-        chatId: Long,
-        telegramUserId: Long
-    )
-
-    fun getChatId(employeeId: Long): Long?
-}
-
-interface NotificationMessageService {
-    fun send(employeeId: Long, message: String)
-    fun sendBulk(employeeIds: List<Long>, message: String)
-}
-
-interface NotificationRetryService {
-    fun retryFailed()
-}
-
 @Service
-class TelegramSenderImpl(
-    private val bot: TelegramBot
-) : TelegramSender {
-
-    override fun send(chatId: Long, text: String): Boolean {
-        return try {
-            bot.execute(SendMessage(chatId.toString(), text))
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-}
-
-@Service
-@Transactional
-class TelegramConnectionServiceImpl(
+class TelegramConnectionService(
     private val repo: TelegramConnectionRepository,
-    private val employeeClient: EmployeeClient,
-    private val retryService: NotificationRetryService,
-    @Value("\${telegram.bot.username}") private val botUsername: String
-) : TelegramConnectionService {
+    private val organizationClient: OrganizationClient
+) {
 
-    override fun generateLinkToken(employeeId: Long): String {
+    fun generateLinkToken(userId: Long, orgId: Long): String {
+        val emp = organizationClient.getEmp(EmpRequest(userId, orgId))
 
-        val conn = repo.findById(employeeId)
-            .orElse(TelegramConnection(employeeId = employeeId))
+        val token = UUID.randomUUID().toString()
 
-        conn.linkToken = UUID.randomUUID().toString()
-        conn.tokenExpiresAt = Instant.now().plusSeconds(900)
+        val conn = repo.findByEmployeeId(emp.id) ?: TelegramConnection(employeeId = emp.id)
+
+        conn.linkToken = token
+        conn.tokenExpiresAt = Instant.now().plusSeconds(600)
         conn.tokenUsed = false
 
         repo.save(conn)
-
-        return conn.linkToken!!
+        return token
     }
 
-    override fun getTelegramLink(employeeId: Long): String {
-        val token = generateLinkToken(employeeId)
-        return "https://t.me/$botUsername?start=$token"
-    }
-
-    override fun linkTelegram(
-        token: String,
-        chatId: Long,
-        telegramUserId: Long
-    ) {
-
-        val conn = repo.findByLinkToken(token)
-            ?: throw IllegalArgumentException("Invalid token")
-
-        if (conn.tokenUsed)
-            throw IllegalStateException("Token already used")
-
-        if (conn.tokenExpiresAt!!.isBefore(Instant.now()))
-            throw IllegalStateException("Token expired")
+    fun confirmLink(token: String, chatId: Long, telegramUserId: Long): Boolean {
+        val conn = repo.findByLinkToken(token) ?: return false
+        if (conn.tokenUsed) return false
+        if (conn.tokenExpiresAt!!.isBefore(Instant.now())) return false
 
         conn.chatId = chatId
         conn.telegramUserId = telegramUserId
@@ -102,91 +37,50 @@ class TelegramConnectionServiceImpl(
         conn.tokenUsed = true
 
         repo.save(conn)
-
-        employeeClient.updateTelegram(
-            conn.employeeId,
-            TelegramUpdateRequest(chatId, telegramUserId)
-        )
-
-        retryService.retryFailed()
+        return true
     }
 
-    override fun getChatId(employeeId: Long): Long? {
-        return repo.findById(employeeId)
-            .map { it.chatId }
-            .orElse(null)
-    }
+    fun getConnections(employeeIds: List<Long>): List<TelegramConnection> =
+        repo.findAllByEmployeeIdIn(employeeIds)
 }
 
+
 @Service
-@Transactional
-class NotificationMessageServiceImpl(
-    private val messageRepo: NotificationMessageRepository,
+class NotificationService(
+    private val telegramBotService: TelegramBotService,
     private val connectionService: TelegramConnectionService,
-    private val telegramSender: TelegramSender
-) : NotificationMessageService {
+    private val taskClient: TaskClient,
+    private val notificationRepo: NotificationMessageRepository
+) {
 
-    override fun send(employeeId: Long, message: String) {
+    fun sendNotification(req: ActionRequest) {
+        val employees = taskClient.getEmployee(req.taskId)
+        val employeeIds = employees.map { it.accountId }
 
-        val entity = messageRepo.save(
-            NotificationMessage(
-                employeeId = employeeId,
-                message = message,
-                status = NotificationStatus.PENDING
+        val connections = connectionService.getConnections(employeeIds)
+            .filter { it.chatId != null }
+
+        connections.forEach {
+            telegramBotService.sendMessage(it.chatId!!, req.content)
+
+            notificationRepo.save(
+                NotificationMessage(
+                    employeeId = it.employeeId,
+                    message = req.content,
+                    status = NotificationStatus.SENT,
+                    sentAt = Instant.now()
+                )
             )
-        )
-
-        val chatId = connectionService.getChatId(employeeId)
-
-        if (chatId == null) {
-            entity.status = NotificationStatus.FAILED
-            messageRepo.save(entity)
-            return
-        }
-
-        val ok = telegramSender.send(chatId, message)
-
-        if (ok) {
-            entity.status = NotificationStatus.SENT
-            entity.sentAt = Instant.now()
-        } else {
-            entity.status = NotificationStatus.FAILED
-        }
-
-        messageRepo.save(entity)
-    }
-
-    override fun sendBulk(employeeIds: List<Long>, message: String) {
-        employeeIds.forEach { employeeId ->
-            send(employeeId, message)
         }
     }
 }
 
+
 @Service
-class NotificationRetryServiceImpl(
-    private val repo: NotificationMessageRepository,
-    private val connectionService: TelegramConnectionService,
-    private val sender: TelegramSender
-) : NotificationRetryService {
-
-    @Scheduled(fixedDelay = 60000)
-    override fun retryFailed() {
-
-        val failed = repo.findAllByStatus(NotificationStatus.FAILED)
-
-        failed.forEach { msg ->
-
-            val chatId = connectionService.getChatId(msg.employeeId)
-                ?: return@forEach
-
-            val ok = sender.send(chatId, msg.message)
-
-            if (ok) {
-                msg.status = NotificationStatus.SENT
-                msg.sentAt = Instant.now()
-                repo.save(msg)
-            }
-        }
+class TelegramBotService(
+    private val bot: NotificationTelegramBot
+) {
+    fun sendMessage(chatId: Long, text: String) {
+        bot.execute(SendMessage(chatId.toString(), text))
     }
 }

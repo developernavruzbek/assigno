@@ -5,50 +5,40 @@ import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
-
 @Component
-class TelegramBot(
-    private val telegramConnectionService: TelegramConnectionService,
-    @Value("\${telegram.bot.username}") private val username: String,
-    @Value("\${telegram.bot.token}") private val token: String
-) : TelegramLongPollingBot(token) {
+class NotificationTelegramBot(
+    @Value("\${telegram.bot.token}") private val tokenValue: String,
+    @Value("\${telegram.bot.username}") private val usernameValue: String,
+    private val connectionService: TelegramConnectionService
+) : TelegramLongPollingBot() {
 
-    override fun getBotUsername() = username
-
-    @Deprecated("Deprecated in Java")
-    override fun getBotToken() = token
+    override fun getBotToken(): String = tokenValue
+    override fun getBotUsername(): String = usernameValue
 
     override fun onUpdateReceived(update: Update) {
+        if (!update.hasMessage()) return
+        val msg = update.message!!
 
-        val msg = update.message ?: return
-        val text = msg.text ?: return
+        if (msg.text.startsWith("/start")) {
+            val token = msg.text.replace("/start", "").trim()
 
-        try {
-            if (text.startsWith("/start ")) {
-
-                val linkToken = text.removePrefix("/start ").trim()
-
-                telegramConnectionService.linkTelegram(
-                    linkToken,
-                    msg.chat.id,
-                    msg.from.id
-                )
-
-                execute(
-                    SendMessage(
-                        msg.chat.id.toString(),
-                        "✅ HRMS Telegram connected"
-                    )
-                )
+            if (token.isBlank()) {
+                execute(SendMessage(msg.chatId.toString(), "❗ Token yuboring: /start <token>"))
+                return
             }
 
-        } catch (e: Exception) {
-            execute(
-                SendMessage(
-                    msg.chat.id.toString(),
-                    "❌ Linking failed: ${e.message}"
-                )
+            val success = connectionService.confirmLink(
+                token = token,
+                chatId = msg.chatId,
+                telegramUserId = msg.from.id.toLong()
             )
+
+            if (success)
+                execute(SendMessage(msg.chatId.toString(), "✅ Telegram hisobingiz bog‘landi!"))
+            else
+                execute(SendMessage(msg.chatId.toString(), "❌ Token xato yoki eskirgan."))
         }
     }
 }
+
+

@@ -95,12 +95,12 @@ class Board(
     @Column(nullable = false)
     var active: Boolean,
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
-    @JoinTable(
-        name = "board_states",
-        joinColumns = [JoinColumn(name = "board_id")],
-        inverseJoinColumns = [JoinColumn(name = "task_state_id")]
+    @OneToMany(
+        mappedBy = "board",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true
     )
+    @OrderBy("position ASC")
     var taskStates: MutableList<TaskState> = mutableListOf()
 
 ) : BaseEntity()
@@ -109,13 +109,21 @@ class Board(
 @Entity
 class TaskState(
 
-    @Column(nullable = false, unique = true, length = 72)
+    @Column(nullable = false, length = 72)
     var name: String,
 
-    @Column(nullable = false, unique = true, length = 60)
-    var code: String
+    @Column(nullable = false, length = 60)
+    var code: String,
+
+    @Column(nullable = false)
+    var position: Int,
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false)
+    var board: Board
 
 ) : BaseEntity()
+
 
 
 @Entity
@@ -140,5 +148,30 @@ class AccountTask(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
     var task: Task
+
+) : BaseEntity()
+
+@Entity
+class TaskAction(
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(nullable = false)
+    var task: Task,
+
+    @Column(nullable = false, length = 50)
+    @Enumerated(EnumType.STRING)
+    var actionType: TaskActionType,
+
+    @Column(nullable = false)
+    var updatedBy: Long,
+
+    @Column(columnDefinition = "TEXT")
+    var oldValue: String? = null,
+
+    @Column(columnDefinition = "TEXT")
+    var newValue: String? = null,
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
 
 ) : BaseEntity()

@@ -1,7 +1,8 @@
-package uz.zero.fileservice
+package org.example.fileservice
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.example.fileservice.ErrorCodes
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler

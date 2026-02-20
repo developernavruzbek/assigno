@@ -1,5 +1,6 @@
 package org.example.task
 
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -7,7 +8,11 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
 
 @RestController
 @RequestMapping("projects")
@@ -39,7 +44,7 @@ class ProjectController(
         projectService.update(id, request)
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): Boolean =
+    fun delete(@PathVariable id: Long) =
         projectService.delete(id)
 }
 
@@ -78,7 +83,7 @@ class BoardController(
         boardService.update(id, request)
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): Boolean =
+    fun delete(@PathVariable id: Long) =
         boardService.delete(id)
 }
 
@@ -139,18 +144,48 @@ class TaskController(
     ): TaskResponse =
         taskService.update(id, request)
 
+    @PutMapping("/{id}/move")
+    fun move(
+        @PathVariable id: Long,
+        @RequestBody request: TaskMoveRequest     //todo for postman   { "direction": "FORWARD" }    |    { "direction": "BACKWARD" }
+    ): TaskResponse = taskService.move(id, request)
+
+
     @PutMapping("/{id}/state")
     fun changeState(
         @PathVariable id: Long,
-        @RequestBody request: TaskStateChangeRequest
+        @RequestBody request: TaskStateChangeRequest // todo TRASHED
     ): TaskResponse =
         taskService.updateState(id, request)
 
     @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): Boolean =
+    fun delete(@PathVariable id: Long) =
         taskService.delete(id)
 }
 
+@RestController
+@RequestMapping("tasks/files")
+class TaskFileController(private val fileIntegrationService: FileIntegrationService) {
+
+    @PostMapping("/{taskId}")
+    fun upload(@RequestPart file: MultipartFile, @PathVariable taskId: Long) =
+        fileIntegrationService.uploadAndLog(file, taskId)
+
+    @DeleteMapping("/{id}/task/{taskId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteFile(@PathVariable id: Long, @PathVariable taskId: Long) =
+        fileIntegrationService.deleteAndLog(id, taskId)
+
+    @DeleteMapping("/by-key")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteByKey(@RequestParam keyName: String, @RequestParam taskId: Long) =
+        fileIntegrationService.deleteByKeyNameAndLog(keyName, taskId)
+
+    @DeleteMapping("/task/{taskId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteAllByTask(@PathVariable taskId: Long) =
+        fileIntegrationService.deleteAllFilesByTask(taskId)
+}
 
 @RestController
 @RequestMapping("account-tasks")
@@ -171,5 +206,9 @@ class AccountTaskController(
         @PathVariable taskId: Long,
         @PathVariable accountId: Long
     ) = service.disallow(taskId, accountId)
+
+
+    @GetMapping("/employee/{taskId}")
+    fun getAllEmployees(@PathVariable taskId: Long) = service.getAllEmployee(taskId)
 }
 

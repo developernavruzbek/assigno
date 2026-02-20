@@ -1,4 +1,4 @@
-package uz.zero.fileservice
+package org.example.fileservice
 
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -13,6 +13,7 @@ import java.security.SecureRandom
 import java.time.LocalDate
 import org.springframework.core.io.Resource
 import org.springframework.core.io.UrlResource
+import uz.zero.fileservice.File
 
 @Service
 class FileService(
@@ -98,6 +99,14 @@ class FileService(
             ?: throw FileNotFoundException(message = "File not found: $keyName").also {
                 log.warn("Fayl topilmadi: keyName={}", keyName)
             }
+    }
+
+    fun deleteByKeyName(keyName: String) {
+        log.info("Faylni o'chirish so'rovi: keyName={}", keyName)
+        val file = getByKey(keyName)
+
+        file.deleted = true
+        fileRepo.save(file)
     }
 
     fun getAllByTaskId(taskId: Long): List<File> {

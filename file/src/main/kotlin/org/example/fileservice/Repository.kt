@@ -1,6 +1,8 @@
-package uz.zero.fileservice
+package org.example.fileservice
+
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
+import uz.zero.fileservice.File
 
 @Repository
 interface FileRepo : JpaRepository<File, Long> {

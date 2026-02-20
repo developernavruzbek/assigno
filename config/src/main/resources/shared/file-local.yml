@@ -1,9 +1,8 @@
 server:
-  port: ${services.ports.notification}
-
+  port: ${services.ports.file}
 spring:
   application:
-    name: notification
+    name: file
 
   datasource:
     url: jdbc:postgresql://localhost:5432/assigno
@@ -13,14 +12,9 @@ spring:
   jpa:
     properties:
       hibernate:
-        default_schema: notifications
+        default_schema: file
 
     hibernate:
       ddl-auto: update
 
     show-sql: true
-
-telegram:
-  bot:
-    username: assigno_notification_bot
-    token: 8522580813:AAGh4hxNLZFt7RVVRsyLvYdxxtYjuaHen0Y

@@ -206,5 +206,9 @@ class AccountTaskController(
         @PathVariable taskId: Long,
         @PathVariable accountId: Long
     ) = service.disallow(taskId, accountId)
+
+
+    @GetMapping("/employee/{taskId}")
+    fun getAllEmployees(@PathVariable taskId: Long) = service.getAllEmployee(taskId)
 }
 

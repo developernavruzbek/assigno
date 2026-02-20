@@ -25,7 +25,6 @@ class OrganizationController(
         organizationService.create(organizationCreateRequest)
 
     @GetMapping("/{orgId}")
-    @PreAuthorize("hasRole('ADMIN')")
     fun getOne(@PathVariable orgId: Long) = organizationService.getOne(orgId)
 
     @PutMapping("/{orgId}")

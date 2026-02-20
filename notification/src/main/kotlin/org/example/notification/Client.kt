@@ -17,7 +17,7 @@ interface OrganizationClient{
 
 @FeignClient(name = "task-service", url = "http://localhost:8082", configuration = [FeignOAuth2TokenConfig::class])
 interface TaskClient{
-    @GetMapping("account-tasks/{taskId}")
+    @GetMapping("account-tasks/employee/{taskId}")
     fun getEmployee(@PathVariable taskId:Long): List<AccountTaskResponse>
 
 }

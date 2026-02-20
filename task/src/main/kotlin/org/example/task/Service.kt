@@ -139,7 +139,9 @@ class BoardServiceImpl(
 
         taskStateService.createDefaultStates(savedBoard)
 
-        return boardMapper.toDto(getByIdOrThrow(savedBoard.id!!))
+        val saved = getByIdOrThrow(savedBoard.id!!)
+
+        return boardMapper.toDto(saved)
     }
 
 
@@ -578,6 +580,7 @@ interface AccountTaskService {
     fun getAllByTaskId(taskId: Long): List<AccountTaskResponse>
     fun disallow(taskId: Long, accountId: Long)
     fun getAccountIdsByTaskId(taskId: Long): MutableList<Long>
+    fun getAllEmployee(taskId:Long):List<AccountTaskResponse>
 }
 
 @Service
@@ -600,7 +603,7 @@ class AccountTaskServiceImpl(
         }
 
         val accountTask = checkAndBuild(request)
-        val saved = accountTaskRepository.save(accountTask)
+        val saved = accountTaskRepository.saveAndRefresh(accountTask)
 
         taskActionService.log(
             task = saved.task,
@@ -633,6 +636,22 @@ class AccountTaskServiceImpl(
             .map { it.accountId }
             .toMutableList()
 
+    override fun getAllEmployee(taskId: Long): List<AccountTaskResponse> {
+        val task = taskRepository.findByIdAndDeletedFalse(taskId)
+            ?: throw TaskNotFoundException("Task not found")
+
+
+        val employees = accountTaskRepository.findAllByTaskIdAndDeletedFalse(taskId)
+            .map { AccountTaskResponse(it.accountId) }
+            .toMutableList()
+
+        val ownerAccountId = task.ownerAccountId
+
+        if (employees.none { it.accountId == ownerAccountId }) {
+            employees.add(AccountTaskResponse(ownerAccountId))
+        }
+        return employees
+    }
     override fun getAllByTaskId(taskId: Long): List<AccountTaskResponse> =
         accountTaskRepository.findAllByTaskIdAndDeletedFalse(taskId)
             .map { AccountTaskResponse(it.accountId) }
@@ -783,12 +802,14 @@ class TaskActionServiceImpl(
         val actionHeader = when(type) {
             TaskActionType.CREATED -> "🆕 Yangi topshiriq yaratildi"
             TaskActionType.UPDATED -> "📝 Topshiriq tahrirlandi"
-            TaskActionType.MOVED_FORWARD, TaskActionType.MOVED_BACKWARD -> "📊 Holat o'zgartirildi"
+            TaskActionType.MOVED_FORWARD,
+            TaskActionType.MOVED_BACKWARD -> "📊 Holat o'zgartirildi"
             TaskActionType.FILE_UPLOADED -> "📎 Yangi fayl yuklandi"
             TaskActionType.FILE_DELETED -> "🗑 Fayl o'chirildi"
             TaskActionType.TASK_ALL_FILES_DELETED -> "⚠️ Barcha fayllar o'chirildi"
             TaskActionType.DELETED -> "🚫 Topshiriq o'chirildi"
-            else -> "🔔 Topshiriqda o'zgarish"
+            TaskActionType.ASSIGNED -> "👤 Mas'ul biriktirildi"
+            TaskActionType.UNASSIGNED -> "👤 Mas'ul chetlatildi"
         }
 
         val sb = StringBuilder()
@@ -800,6 +821,20 @@ class TaskActionServiceImpl(
         sb.append("📌 Topshiriq: ${task.name}\n\n")
 
         when (type) {
+            TaskActionType.ASSIGNED -> {
+                val assignedUserId = newValue?.toLongOrNull()
+                val assignedUserName = if (assignedUserId != null) {
+                    try { userClient.getUserById(assignedUserId).fullName } catch (e: Exception) { "ID: $assignedUserId" }
+                } else "Noma'lum"
+                sb.append("✅ $assignedUserName ushbu topshiriqqa mas'ul etib belgilandi.")
+            }
+            TaskActionType.UNASSIGNED -> {
+                val unassignedUserId = oldValue?.toLongOrNull()
+                val unassignedUserName = if (unassignedUserId != null) {
+                    try { userClient.getUserById(unassignedUserId).fullName } catch (e: Exception) { "ID: $unassignedUserId" }
+                } else "Noma'lum"
+                sb.append("❌ $unassignedUserName topshiriq mas'ul ro'yxatidan chiqarildi.")
+            }
             TaskActionType.FILE_UPLOADED -> {
                 sb.append("📁 Fayl nomi: $newValue\n")
             }
@@ -816,6 +851,7 @@ class TaskActionServiceImpl(
                 }
             }
         }
+
 
         sb.append("\n🔗 [Topshiriqni ko'rish](http://your-app.uz/tasks/${task.id})")
 

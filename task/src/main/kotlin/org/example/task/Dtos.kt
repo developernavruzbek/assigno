@@ -189,8 +189,8 @@ data class EmpResponse(
 
 data class ActionRequest(
     val taskId: Long,
-    val taskOwnerId: Long,
-    val content: String
+    val content: String,
+    val employees: List<Long>
 )
 
 data class OrganizationResponse(

@@ -52,15 +52,14 @@ class TelegramConnectionService(
 class NotificationService(
     private val telegramBotService: TelegramBotService,
     private val connectionService: TelegramConnectionService,
-    private val taskClient: TaskClient,
     private val notificationRepo: NotificationMessageRepository
 ) {
 
     fun sendNotification(req: ActionRequest) {
-        val employees = taskClient.getEmployee(req.taskId)
-        val employeeIds = employees.map { it.accountId }
-        val connections = connectionService.getConnections(employeeIds)
-            .filter { it.chatId != null }
+        val connections = connectionService
+            .getConnections(req.employees).filter { it.chatId != null }
+        println(" ============================================================================================== " +
+                "$connections")
         connections.forEach {
             telegramBotService.sendMessage(it.chatId!!, req.content)
             notificationRepo.save(

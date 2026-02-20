@@ -389,7 +389,8 @@ class TaskServiceImpl(
         taskActionService.log(
             task = saved,
             type = TaskActionType.CREATED,
-            comment = "New Task created"
+            comment = "New Task created",
+            employeeIds = accountTaskService.getAllEmployee(saved.id!!)
         )
 
         return taskMapper.toDto(saved, mutableListOf())
@@ -580,7 +581,7 @@ interface AccountTaskService {
     fun getAllByTaskId(taskId: Long): List<AccountTaskResponse>
     fun disallow(taskId: Long, accountId: Long)
     fun getAccountIdsByTaskId(taskId: Long): MutableList<Long>
-    fun getAllEmployee(taskId:Long):List<AccountTaskResponse>
+    fun getAllEmployee(taskId:Long):List<Long>
 }
 
 @Service
@@ -608,7 +609,8 @@ class AccountTaskServiceImpl(
         taskActionService.log(
             task = saved.task,
             type = TaskActionType.ASSIGNED,
-            newValue = saved.accountId.toString()
+            newValue = saved.accountId.toString(),
+            employeeIds = getAllEmployee(saved.task.id!!)
         )
 
         return AccountTaskResponse(accountId = saved.accountId)
@@ -636,22 +638,16 @@ class AccountTaskServiceImpl(
             .map { it.accountId }
             .toMutableList()
 
-    override fun getAllEmployee(taskId: Long): List<AccountTaskResponse> {
+    override fun getAllEmployee(taskId: Long): List<Long> {
         val task = taskRepository.findByIdAndDeletedFalse(taskId)
             ?: throw TaskNotFoundException("Task not found")
 
-
-        val employees = accountTaskRepository.findAllByTaskIdAndDeletedFalse(taskId)
-            .map { AccountTaskResponse(it.accountId) }
-            .toMutableList()
-
-        val ownerAccountId = task.ownerAccountId
-
-        if (employees.none { it.accountId == ownerAccountId }) {
-            employees.add(AccountTaskResponse(ownerAccountId))
-        }
-        return employees
+        return accountTaskRepository.findAllByTaskIdAndDeletedFalse(taskId)
+            .map { it.accountId }
+            .plus(task.ownerAccountId)
+            .distinct()
     }
+
     override fun getAllByTaskId(taskId: Long): List<AccountTaskResponse> =
         accountTaskRepository.findAllByTaskIdAndDeletedFalse(taskId)
             .map { AccountTaskResponse(it.accountId) }
@@ -686,7 +682,8 @@ interface TaskActionService {
         type: TaskActionType,
         oldValue: String? = null,
         newValue: String? = null,
-        comment: String? = null
+        comment: String? = null,
+        employeeIds: List<Long>? = null
     )
 }
 
@@ -759,10 +756,10 @@ class TaskActionServiceImpl(
     private val taskActionRepository: TaskActionRepository,
     private val notificationClient: NotificationClient,
     private val organizationClient: OrganizationClient,
-    private val userClient: UserClient
+    private val userClient: UserClient,
 ) : TaskActionService {
 
-    override fun log(task: Task, type: TaskActionType, oldValue: String?, newValue: String?, comment: String?) {
+    override fun log(task: Task, type: TaskActionType, oldValue: String?, newValue: String?, comment: String?, employeeIds: List<Long>?) {
         val currentUserId = userId()
 
         val action = TaskAction(
@@ -780,8 +777,8 @@ class TaskActionServiceImpl(
         notificationClient.sendNotification(
             ActionRequest(
                 taskId = task.id!!,
-                taskOwnerId = task.ownerAccountId,
-                content = content
+                content = content,
+                employees = employeeIds ?: emptyList()
             )
         )
     }

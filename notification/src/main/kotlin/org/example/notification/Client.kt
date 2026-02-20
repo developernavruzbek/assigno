@@ -12,12 +12,15 @@ interface OrganizationClient{
     @PostMapping("employee/get-emp")
     fun getEmp(@RequestBody empRequest: EmpRequest): EmpResponse
 
-}
-
-
-@FeignClient(name = "task-service", url = "http://localhost:8082", configuration = [FeignOAuth2TokenConfig::class])
-interface TaskClient{
-    @GetMapping("account-tasks/employee/{taskId}")
-    fun getEmployee(@PathVariable taskId:Long): List<AccountTaskResponse>
+    @GetMapping("/org/{orgId}")
+    fun getOne(@PathVariable("orgId") orgId: Long): OrganizationResponse
 
 }
+
+
+//@FeignClient(name = "task-service", url = "http://localhost:8082", configuration = [FeignOAuth2TokenConfig::class])
+//interface TaskClient{
+//    @GetMapping("account-tasks/employee/{taskId}")
+//    fun getEmployee(@PathVariable taskId:Long): List<AccountTaskResponse>
+//
+//}

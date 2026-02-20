@@ -9,7 +9,8 @@ import org.telegram.telegrambots.meta.api.objects.Update
 class NotificationTelegramBot(
     @Value("\${telegram.bot.token}") private val tokenValue: String,
     @Value("\${telegram.bot.username}") private val usernameValue: String,
-    private val connectionService: TelegramConnectionService
+    private val connectionService: TelegramConnectionService,
+    private val organizationClient: OrganizationClient
 ) : TelegramLongPollingBot() {
 
     override fun getBotToken(): String = tokenValue
@@ -30,11 +31,11 @@ class NotificationTelegramBot(
             val success = connectionService.confirmLink(
                 token = token,
                 chatId = msg.chatId,
-                telegramUserId = msg.from.id.toLong()
+                telegramUserId = msg.from.id
             )
 
             if (success)
-                execute(SendMessage(msg.chatId.toString(), "✅ Telegram hisobingiz bog‘landi!"))
+                execute(SendMessage(msg.chatId.toString(), "✅ Telegram hisobingiz ${organizationClient.getOne(currentOrgId()!!).name} korxona botiga bog‘landi!"))
             else
                 execute(SendMessage(msg.chatId.toString(), "❌ Token xato yoki eskirgan."))
         }

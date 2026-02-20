@@ -425,28 +425,34 @@ class TaskServiceImpl(
     @Transactional
     override fun update(taskId: Long, request: TaskUpdateRequest): TaskResponse {
         val task = getByIdOrThrow(taskId)
+        val changes = mutableListOf<String>()
 
-        logIfChanged(task, "name", task.name, request.name)
-        logIfChanged(task, "description", task.description, request.description)
-        logIfChanged(task, "dueDate", task.dueDate.toString(), request.dueDate?.toString())
-        logIfChanged(task, "priority", task.priority.toString(), request.priority?.toString())
+        if (request.name != null && request.name != task.name) {
+            changes.add("Nomi: ${task.name} -> ${request.name}")
+        }
+        if (request.description != null && request.description != task.description) {
+            changes.add("Tavsifi o'zgartirildi")
+        }
+        if (request.dueDate != null && request.dueDate != task.dueDate) {
+            changes.add("Muddat: ${task.dueDate} -> ${request.dueDate}")
+        }
+        if (request.priority != null && request.priority != task.priority) {
+            changes.add("Prioritet: ${task.priority} -> ${request.priority}")
+        }
+
+        if (changes.isNotEmpty()) {
+            taskActionService.log(
+                task = task,
+                type = TaskActionType.UPDATED,
+                comment = changes.joinToString("\n")
+            )
+        }
 
         applyUpdates(task, request)
         val saved = taskRepository.save(task)
 
         val assigns = accountTaskService.getAccountIdsByTaskId(taskId)
         return taskMapper.toDto(saved, assigns)
-    }
-
-    private fun logIfChanged(task: Task, field: String, oldValue: String?, newValue: String?) {
-        if (newValue != null && oldValue != newValue) {
-            taskActionService.log(
-                task = task,
-                type = TaskActionType.UPDATED,
-                oldValue = "$field:$oldValue",
-                newValue = "$field:$newValue"
-            )
-        }
     }
 
     /**
@@ -666,19 +672,74 @@ interface TaskActionService {
 
 @Service
 class TaskActionServiceImpl(
-    private val taskActionRepository: TaskActionRepository
+    private val taskActionRepository: TaskActionRepository,
+    private val notificationClient: NotificationClient,
+    private val organizationClient: OrganizationClient,
+    private val userClient: UserClient
 ) : TaskActionService {
 
     override fun log(task: Task, type: TaskActionType, oldValue: String?, newValue: String?, comment: String?) {
+        val currentUserId = userId()
+
         val action = TaskAction(
             task = task,
             actionType = type,
-            updatedBy = userId(),
+            updatedBy = currentUserId,
             oldValue = oldValue,
             newValue = newValue,
             comment = comment
         )
         taskActionRepository.save(action)
+
+        val content = buildTelegramMessage(task, type, oldValue, newValue, comment, currentUserId)
+
+        notificationClient.sendNotification(
+            ActionRequest(
+                taskId = task.id!!,
+                taskOwnerId = task.ownerAccountId,
+                content = content
+            )
+        )
+    }
+
+    private fun buildTelegramMessage(
+        task: Task,
+        type: TaskActionType,
+        oldValue: String?,
+        newValue: String?,
+        comment: String?,
+        currentUserId: Long
+    ): String {
+        val now = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+
+        val actorFullName = try { userClient.getUserById(currentUserId).fullName } catch (e: Exception) { "ID: $currentUserId ${e.message}" }
+        val orgName = try { organizationClient.getOne(task.board.project.organizationId).name } catch (e: Exception) { "ID: ${task.board.project.organizationId} ${e.message}" }
+
+        val actionHeader = when(type) {
+            TaskActionType.UPDATED -> "📝 Topshiriq tahrirlandi"
+            TaskActionType.MOVED_FORWARD, TaskActionType.MOVED_BACKWARD -> "📊 Holat o'zgartirildi"
+            else -> "🔔 Taskda o'zgarish"
+        }
+
+        val sb = StringBuilder()
+        sb.append("$actionHeader\n\n")
+        sb.append("🕒 $now\n")
+        sb.append("🏢 Tashkilot: $orgName\n")
+        sb.append("📚 Loyiha: ${task.board.project.name}\n")
+        sb.append("👨‍💻 Harakat egasi: $actorFullName\n")
+        sb.append("💾 Sarlavha: ${task.name}\n\n")
+
+        if (!comment.isNullOrBlank()) {
+            sb.append("🔄 O'zgarishlar:\n$comment\n")
+        }
+
+        if (oldValue != null && newValue != null) {
+            sb.append("📊 Holat: $oldValue ➡️ $newValue\n")
+        }
+
+        sb.append("\n🔗 [Topshiriqni ko'rish](http://your-app.uz/tasks/${task.id})") // TODO shu joyi o'zgaradi ))
+
+        return sb.toString()
     }
 }
 

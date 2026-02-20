@@ -139,10 +139,17 @@ class TaskController(
     ): TaskResponse =
         taskService.update(id, request)
 
+    @PutMapping("/{id}/move")
+    fun move(
+        @PathVariable id: Long,
+        @RequestBody request: TaskMoveRequest     //todo for postman   { "direction": "FORWARD" }    |    { "direction": "BACKWARD" }
+    ): TaskResponse = taskService.move(id, request)
+
+
     @PutMapping("/{id}/state")
     fun changeState(
         @PathVariable id: Long,
-        @RequestBody request: TaskStateChangeRequest
+        @RequestBody request: TaskStateChangeRequest // todo TRASHED
     ): TaskResponse =
         taskService.updateState(id, request)
 

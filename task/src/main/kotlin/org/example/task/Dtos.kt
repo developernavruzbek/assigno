@@ -102,7 +102,7 @@ data class TaskStateChangeRequest(
     @field:NotBlank
     @field:Size(max = 60)
     val code: String,
-) // o'zgaradi menimcha
+)
 
 data class TaskStateMoveRequest(
     val direction: String // UP yoki DOWN
@@ -185,4 +185,20 @@ data class EmpResponse(
     val orgId:Long,
     val position: String
 
+)
+
+data class ActionRequest(
+    val taskId: Long,
+    val taskOwnerId: Long,
+    val content: String
+)
+
+data class OrganizationResponse(
+    val id: Long,
+    val name: String
+)
+
+data class UserResponse(
+    val id: Long,
+    val fullName: String,
 )

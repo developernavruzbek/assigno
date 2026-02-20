@@ -2,7 +2,7 @@ package org.example.task
 
 import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
-
+/*
 @Component
 class DefaultTaskStatesInitializer(
     private val taskStateRepository: TaskStateRepository
@@ -22,3 +22,6 @@ class DefaultTaskStatesInitializer(
         }
     }
 }
+
+
+ */

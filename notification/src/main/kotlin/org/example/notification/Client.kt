@@ -12,11 +12,6 @@ interface OrganizationClient{
     @PostMapping("employee/get-emp")
     fun getEmp(@RequestBody empRequest: EmpRequest): EmpResponse
 
-    @GetMapping("employee/{employeeId}")
-    fun getEmployee(@PathVariable employeeId:Long): EmpResponse
-
-    @PostMapping("employee/get-employee")
-    fun getEmp2(@RequestBody empRequest: EmpRequest): EmpResponse
 }
 
 

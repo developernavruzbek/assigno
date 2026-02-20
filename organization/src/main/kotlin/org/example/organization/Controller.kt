@@ -79,6 +79,4 @@ class EmployeeController(
     @PostMapping("/get-emp")
     fun getEmp(@RequestBody empRequest: EmpRequest) = employeeService.getEmp(empRequest)
 
-    @PostMapping("/get-employee")
-    fun getEmp2(@RequestBody empRequest: EmpRequest) = employeeService.getEmp2(empRequest)
 }

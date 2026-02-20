@@ -1,5 +1,6 @@
 package org.example.notification
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import java.time.Instant
@@ -8,9 +9,10 @@ import java.util.UUID
 @Service
 class TelegramConnectionService(
     private val repo: TelegramConnectionRepository,
-    private val organizationClient: OrganizationClient
-) {
+    private val organizationClient: OrganizationClient,
+    @Value("\${telegram.bot.username}") private val botUsername: String
 
+) {
     fun generateLinkToken(userId: Long, orgId: Long): String {
         val emp = organizationClient.getEmp(EmpRequest(userId, orgId))
 
@@ -23,9 +25,9 @@ class TelegramConnectionService(
         conn.tokenUsed = false
 
         repo.save(conn)
-        return token
+        val deepLink = "https://t.me/$botUsername?start=$token"
+        return deepLink
     }
-
     fun confirmLink(token: String, chatId: Long, telegramUserId: Long): Boolean {
         val conn = repo.findByLinkToken(token) ?: return false
         if (conn.tokenUsed) return false
@@ -55,8 +57,8 @@ class NotificationService(
 
     fun sendNotification(req: ActionRequest) {
         val employees = taskClient.getEmployee(req.taskId)
-        val employeeIds = employees.map { it.accountId }
-
+        val employeeIds = employees.map { it.accountId }.toMutableList()
+        employeeIds.add(req.taskOwnerId)
         val connections = connectionService.getConnections(employeeIds)
             .filter { it.chatId != null }
 
@@ -74,8 +76,6 @@ class NotificationService(
         }
     }
 }
-
-
 @Service
 class TelegramBotService(
     private val bot: NotificationTelegramBot

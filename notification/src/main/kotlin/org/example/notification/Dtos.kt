@@ -57,7 +57,8 @@ data class AccountTaskResponse(
 
 
 data class ActionRequest(
-    val taskId:Long,
-    val content:String
+    val taskId: Long,
+    val taskOwnerId: Long,
+    val content: String
 )
 

@@ -83,9 +83,7 @@ interface EmployeeService{
     fun getAllByOrganizationId(organizationId: Long): List<EmployeeResponse>
     fun delete(id: Long)
     fun changeCurrentOrg(changeCurrentOrganizationRequest: ChangeCurrentOrganizationRequest)
-    fun getEmp(empRequest: EmpRequest): EmpResponse
-    fun getEmp2(empRequest: EmpRequest): EmpResponse
-}
+    fun getEmp(empRequest: EmpRequest): EmpResponse }
 
 @Service
 class EmployeeServiceImpl(
@@ -105,19 +103,6 @@ class EmployeeServiceImpl(
         }
         employeeRepository.save(employeeMapper.toEntity(employeeCreateRequest, activeOrganization))
         userClient.changeCurrentOrg(ChangeCurrentOrganizationRequest(employeeCreateRequest.userId, activeOrganization.id!!))
-        /*
-        val employee = getEmployee(employeeCreateRequest.userId)
-        if(employee.organization.id==employeeCreateRequest.userId){
-            val organization = getActiveOrganization(employeeCreateRequest.organizationId)
-
-            employeeRepository.save(employeeMapper.toEntity(employeeCreateRequest, organization))
-
-            userClient.changeCurrentOrg(ChangeCurrentOrganizationRequest(employeeCreateRequest.userId, organization.id!!))
-        }else{
-            throw EmployeeAlreadyExistsException()
-        }
-
-         */
 
     }
 
@@ -197,19 +182,6 @@ class EmployeeServiceImpl(
         )
     }
 
-    override fun getEmp2(empRequest: EmpRequest): EmpResponse {
-        val organization = organizationRepository.findByIdAndActive(empRequest.orgId, true)
-        val emp = employeeRepository.findByAccountIdAndOrganization(empRequest.userId, organization!!)
-               ?:throw EmployeeNotFoundException()
-
-
-        return EmpResponse(
-            id  = emp.id!!,
-            userId = emp.accountId,
-            orgId = emp.organization.id!!,
-            position = emp.position
-        )
-    }
 
     /** private helper **/
 

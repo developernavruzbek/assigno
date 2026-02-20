@@ -1,0 +1,20 @@
+server:
+  port: ${services.ports.file}
+spring:
+  application:
+    name: file
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/assigno
+    username: postgres
+    password: root123
+
+  jpa:
+    properties:
+      hibernate:
+        default_schema: file
+
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true

@@ -2,9 +2,13 @@ package org.example.task
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.context.request.WebRequest
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.server.ResponseStatusException
 import java.time.LocalDateTime
 
 sealed class BaseException(
@@ -47,54 +51,71 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(BaseException::class)
     fun handleBaseException(ex: BaseException, request: WebRequest): ResponseEntity<ErrorResponse> {
-
         val status = when (ex) {
-            is OrganizationDidNotFoundException -> HttpStatus.NOT_FOUND
-            is TaskNotFoundException -> HttpStatus.NOT_FOUND
-            is TaskStateNotFoundException -> HttpStatus.NOT_FOUND
-            is AccountTaskNotFoundException -> HttpStatus.NOT_FOUND
-            is ProjectNotFoundException -> HttpStatus.NOT_FOUND
-            is BoardNotFoundException -> HttpStatus.NOT_FOUND
+            is OrganizationDidNotFoundException, is TaskNotFoundException,
+            is TaskStateNotFoundException, is AccountTaskNotFoundException,
+            is ProjectNotFoundException, is BoardNotFoundException -> HttpStatus.NOT_FOUND
 
-            is TaskAlreadyExistsException -> HttpStatus.CONFLICT
-            is AccountAlreadyAssignedException -> HttpStatus.CONFLICT
-            is ProjectAlreadyExistsException -> HttpStatus.CONFLICT
-            is BoardAlreadyExistsException -> HttpStatus.CONFLICT
+            is TaskAlreadyExistsException, is AccountAlreadyAssignedException,
+            is ProjectAlreadyExistsException, is BoardAlreadyExistsException,
             is TaskStateAlreadyExistsException -> HttpStatus.CONFLICT
 
-            is BadRequestException -> HttpStatus.BAD_REQUEST
-
             is ForbiddenException -> HttpStatus.FORBIDDEN
-
+            is BadRequestException -> HttpStatus.BAD_REQUEST
             else -> HttpStatus.BAD_REQUEST
         }
-
-        val response = ErrorResponse(
-            timestamp = LocalDateTime.now(),
-            status = status.value(),
-            error = status.reasonPhrase,
-            code = ex.errorCode.name,
-            message = ex.message ?: "Unexpected error",
-            path = request.getDescription(false).removePrefix("uri=")
-        )
-
-        return ResponseEntity(response, status)
+        return buildResponse(status, ex.errorCode.name, ex.message, request)
     }
 
+    @ExceptionHandler(ResponseStatusException::class)
+    fun handleResponseStatusException(ex: ResponseStatusException, request: WebRequest): ResponseEntity<ErrorResponse> {
+        return buildResponse(
+            HttpStatus.valueOf(ex.statusCode.value()),
+            "INTERNAL_SERVICE_ERROR",
+            ex.reason ?: "Ichki servisda xatolik",
+            request
+        )
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handleValidationException(ex: MethodArgumentNotValidException, request: WebRequest): ResponseEntity<ErrorResponse> {
+        val errors = ex.bindingResult.fieldErrors.joinToString(", ") { "${it.field}: ${it.defaultMessage}" }
+        return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", errors, request)
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleTypeMismatch(ex: MethodArgumentTypeMismatchException, request: WebRequest): ResponseEntity<ErrorResponse> {
+        val message = "Parametr '${ex.name}' noto'g'ri turda. Kutilgan: ${ex.requiredType?.simpleName}"
+        return buildResponse(HttpStatus.BAD_REQUEST, "TYPE_MISMATCH", message, request)
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleNotReadable(ex: HttpMessageNotReadableException, request: WebRequest): ResponseEntity<ErrorResponse> {
+        return buildResponse(HttpStatus.BAD_REQUEST, "JSON_ERROR", "JSON formatida xato yoki body bo'sh", request)
+    }
 
     @ExceptionHandler(Exception::class)
     fun handleGlobalException(ex: Exception, request: WebRequest): ResponseEntity<ErrorResponse> {
-        val status = HttpStatus.INTERNAL_SERVER_ERROR
+        val log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+        log.error("Kutilmagan xato: ", ex)
 
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", ex.message, request)
+    }
+
+    private fun buildResponse(
+        status: HttpStatus,
+        code: String,
+        message: String?,
+        request: WebRequest
+    ): ResponseEntity<ErrorResponse> {
         val response = ErrorResponse(
             timestamp = LocalDateTime.now(),
             status = status.value(),
             error = status.reasonPhrase,
-            code = "INTERNAL_ERROR",
-            message = ex.message ?: "An unexpected error occurred",
+            code = code,
+            message = message ?: "Kutilmagan xato yuz berdi",
             path = request.getDescription(false).removePrefix("uri=")
         )
-
         return ResponseEntity(response, status)
     }
 }

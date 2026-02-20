@@ -1,4 +1,4 @@
-package uz.zero.fileservice
+package org.example.fileservice
 
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing

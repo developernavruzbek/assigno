@@ -1,4 +1,4 @@
-package uz.zero.fileservice
+package org.example.fileservice
 
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.Resource
@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
+import uz.zero.fileservice.File
 
 @RestController
 @RequestMapping()
@@ -41,6 +42,13 @@ class FileController(
     fun deleteFile(@PathVariable id: Long) {
         log.info("REST request to delete file: id={}", id)
         fileService.delete(id)
+    }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteFileByKeyName(@RequestParam("keyName") keyName: String) {
+        log.info("REST request to delete file: keyName={}", keyName)
+        fileService.deleteByKeyName(keyName)
     }
 
     @DeleteMapping("/task/{taskId}")

@@ -36,6 +36,9 @@ enum class TaskActionType {
     MOVED_FORWARD,
     MOVED_BACKWARD,
     ASSIGNED,
+    FILE_UPLOADED,
+    FILE_DELETED,
+    TASK_ALL_FILES_DELETED,
     UNASSIGNED,
     DELETED
 }

@@ -1,4 +1,4 @@
-package uz.zero.fileservice
+package org.example.fileservice
 
 enum class MediaType {
     IMAGE,

@@ -5,6 +5,9 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.http.MediaType
+import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 
 @FeignClient(
     name = "organization-service",
@@ -45,3 +48,31 @@ interface NotificationClient {
     @PostMapping("/notification/send")
     fun sendNotification(@RequestBody request: ActionRequest)
 }
+
+@FeignClient(
+    name = "file-service",
+    url = "http://localhost:8085",
+    configuration = [FeignOAuth2TokenConfig::class]
+)
+interface FileClient {
+
+    @PostMapping("/upload/{taskId}", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun uploadFile(
+        @RequestPart("file") file: MultipartFile,
+        @PathVariable("taskId") taskId: Long
+    ): FileResponse
+
+    @DeleteMapping("/{id}")
+    fun deleteFile(@PathVariable("id") id: Long)
+
+    @DeleteMapping
+    fun deleteFileByKeyName(@RequestParam("keyName") keyName: String)
+
+    @DeleteMapping("/task/{taskId}")
+    fun deleteFilesByTask(@PathVariable("taskId") taskId: Long)
+
+    @GetMapping("/task/{taskId}")
+    fun getFilesByTask(@PathVariable("taskId") taskId: Long): List<FileResponse>
+}
+
+data class FileResponse(val id: Long, val keyName: String, val taskId: Long)

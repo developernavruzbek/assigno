@@ -26,12 +26,24 @@ class FeignOAuth2TokenConfig {
 
     @Bean
     fun errorDecoder(): ErrorDecoder {
+        val log = org.slf4j.LoggerFactory.getLogger(ErrorDecoder::class.java)
+
         return ErrorDecoder { methodKey, response ->
+            val errorMessage = try {
+                response.body()?.asInputStream()?.bufferedReader()?.use { it.readText() }
+            } catch (e: Exception) {
+                null
+            }
+
+            log.error("Feign xatosi: Metod=$methodKey, Status=${response.status()}, Xabar=$errorMessage")
+
             when (response.status()) {
-                400 -> ResponseStatusException(HttpStatus.BAD_REQUEST, "Internal service: Bad request sent")
-                401 -> ResponseStatusException(HttpStatus.UNAUTHORIZED, "Internal Service: Authorization Error")
-                403 -> ResponseStatusException(HttpStatus.FORBIDDEN, "Internal Service: Access Denied")
-                404 -> ResponseStatusException(HttpStatus.NOT_FOUND, "Internal service: Resource not found")
+                400 -> ResponseStatusException(HttpStatus.BAD_REQUEST, errorMessage ?: "Bad request sent")
+                401 -> ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization Error (Token may be expired)")
+                403 -> ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to perform this action")
+                404 -> ResponseStatusException(HttpStatus.NOT_FOUND, errorMessage ?: "Resource not found")
+                // 429 - Too Many Requests (Exceeding Limit)
+                429 -> ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Request limit exceeded")
                 500 -> ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Technical error in internal service")
                 else -> ErrorDecoder.Default().decode(methodKey, response)
             }

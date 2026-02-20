@@ -3,6 +3,7 @@ package org.example.task
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.multipart.MultipartFile
 
 
 /**
@@ -671,6 +672,70 @@ interface TaskActionService {
 }
 
 @Service
+class FileIntegrationService(
+    private val fileClient: FileClient,
+    private val taskActionService: TaskActionService,
+    private val taskRepository: TaskRepository
+) {
+
+    @Transactional
+    fun uploadAndLog(file: MultipartFile, taskId: Long): FileResponse {
+        val task = getTask(taskId)
+        val response = fileClient.uploadFile(file, taskId)
+
+        taskActionService.log(
+            task = task,
+            type = TaskActionType.FILE_UPLOADED,
+            oldValue = null,
+            newValue = response.keyName
+        )
+        return response
+    }
+
+    @Transactional
+    fun deleteAndLog(fileId: Long, taskId: Long) {
+        val task = getTask(taskId)
+        fileClient.deleteFile(fileId)
+
+        taskActionService.log(
+            task = task,
+            type = TaskActionType.FILE_DELETED,
+            oldValue = "file_id: $fileId",
+            newValue = null
+        )
+    }
+
+    @Transactional
+    fun deleteByKeyNameAndLog(keyName: String, taskId: Long) {
+        val task = getTask(taskId)
+        fileClient.deleteFileByKeyName(keyName)
+
+        taskActionService.log(
+            task = task,
+            type = TaskActionType.FILE_DELETED,
+            oldValue = "keyName: $keyName",
+            newValue = null
+        )
+    }
+
+    @Transactional
+    fun deleteAllFilesByTask(taskId: Long) {
+        val task = getTask(taskId)
+        fileClient.deleteFilesByTask(taskId)
+
+        taskActionService.log(
+            task = task,
+            type = TaskActionType.TASK_ALL_FILES_DELETED,
+            oldValue = "All files removed",
+            newValue = null
+        )
+    }
+
+    private fun getTask(taskId: Long): Task = taskRepository.findById(taskId)
+        .orElseThrow { TaskNotFoundException("Task not found with id: $taskId") }
+}
+
+@Service
 class TaskActionServiceImpl(
     private val taskActionRepository: TaskActionRepository,
     private val notificationClient: NotificationClient,
@@ -712,13 +777,18 @@ class TaskActionServiceImpl(
     ): String {
         val now = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
 
-        val actorFullName = try { userClient.getUserById(currentUserId).fullName } catch (e: Exception) { "ID: $currentUserId ${e.message}" }
-        val orgName = try { organizationClient.getOne(task.board.project.organizationId).name } catch (e: Exception) { "ID: ${task.board.project.organizationId} ${e.message}" }
+        val actorFullName = try { userClient.getUserById(currentUserId).fullName } catch (e: Exception)  { "User Not Found with ID: $currentUserId ${e.message}" }
+        val orgName = try { organizationClient.getOne(task.board.project.organizationId).name } catch (e: Exception) { "Organization Not Found with ID: ${task.board.project.organizationId} ${e.message}" }
 
         val actionHeader = when(type) {
+            TaskActionType.CREATED -> "🆕 Yangi topshiriq yaratildi"
             TaskActionType.UPDATED -> "📝 Topshiriq tahrirlandi"
             TaskActionType.MOVED_FORWARD, TaskActionType.MOVED_BACKWARD -> "📊 Holat o'zgartirildi"
-            else -> "🔔 Taskda o'zgarish"
+            TaskActionType.FILE_UPLOADED -> "📎 Yangi fayl yuklandi"
+            TaskActionType.FILE_DELETED -> "🗑 Fayl o'chirildi"
+            TaskActionType.TASK_ALL_FILES_DELETED -> "⚠️ Barcha fayllar o'chirildi"
+            TaskActionType.DELETED -> "🚫 Topshiriq o'chirildi"
+            else -> "🔔 Topshiriqda o'zgarish"
         }
 
         val sb = StringBuilder()
@@ -727,17 +797,27 @@ class TaskActionServiceImpl(
         sb.append("🏢 Tashkilot: $orgName\n")
         sb.append("📚 Loyiha: ${task.board.project.name}\n")
         sb.append("👨‍💻 Harakat egasi: $actorFullName\n")
-        sb.append("💾 Sarlavha: ${task.name}\n\n")
+        sb.append("📌 Topshiriq: ${task.name}\n\n")
 
-        if (!comment.isNullOrBlank()) {
-            sb.append("🔄 O'zgarishlar:\n$comment\n")
+        when (type) {
+            TaskActionType.FILE_UPLOADED -> {
+                sb.append("📁 Fayl nomi: $newValue\n")
+            }
+            TaskActionType.FILE_DELETED -> {
+                sb.append("❌ O'chirilgan ma'lumot: $oldValue\n")
+            }
+            TaskActionType.TASK_ALL_FILES_DELETED -> {
+                sb.append("ℹ️ Topshiriqqa biriktirilgan barcha hujjatlar tizimdan olib tashlandi.\n")
+            }
+            else -> {
+                if (!comment.isNullOrBlank()) sb.append("🔄 Batafsil:\n$comment\n")
+                if (oldValue != null && newValue != null && type != TaskActionType.FILE_DELETED) {
+                    sb.append("🔄 O'zgarish: $oldValue ➡️ $newValue\n")
+                }
+            }
         }
 
-        if (oldValue != null && newValue != null) {
-            sb.append("📊 Holat: $oldValue ➡️ $newValue\n")
-        }
-
-        sb.append("\n🔗 [Topshiriqni ko'rish](http://your-app.uz/tasks/${task.id})") // TODO shu joyi o'zgaradi ))
+        sb.append("\n🔗 [Topshiriqni ko'rish](http://your-app.uz/tasks/${task.id})")
 
         return sb.toString()
     }

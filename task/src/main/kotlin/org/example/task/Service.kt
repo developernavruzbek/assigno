@@ -639,12 +639,11 @@ class AccountTaskServiceImpl(
             .toMutableList()
 
     override fun getAllEmployee(taskId: Long): List<Long> {
-        val task = taskRepository.findByIdAndDeletedFalse(taskId)
+        taskRepository.findByIdAndDeletedFalse(taskId)
             ?: throw TaskNotFoundException("Task not found")
 
         return accountTaskRepository.findAllByTaskIdAndDeletedFalse(taskId)
             .map { it.accountId }
-            .plus(task.ownerAccountId)
             .distinct()
     }
 
@@ -777,6 +776,7 @@ class TaskActionServiceImpl(
         notificationClient.sendNotification(
             ActionRequest(
                 taskId = task.id!!,
+                ownerId = task.ownerAccountId,
                 content = content,
                 employees = employeeIds ?: emptyList()
             )

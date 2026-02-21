@@ -29,6 +29,7 @@ class TelegramConnectionService(
         val deepLink = "https://t.me/$botUsername?start=$token"
         return deepLink
     }
+
     fun confirmLink(token: String, chatId: Long, telegramUserId: Long): Boolean {
         val conn = repo.findByLinkToken(token) ?: return false
         if (conn.tokenUsed) return false
@@ -56,12 +57,21 @@ class NotificationService(
 ) {
 
     fun sendNotification(req: ActionRequest) {
+
+        val allRecipients = (req.employees + req.ownerId).distinct()
+
         val connections = connectionService
-            .getConnections(req.employees).filter { it.chatId != null }
-        println(" ============================================================================================== " +
-                "$connections")
+            .getConnections(allRecipients)
+            .filter { it.chatId != null }
+
+        println(
+            " ============================================================================================== " +
+                    "$connections"
+        )
+
         connections.forEach {
             telegramBotService.sendMessage(it.chatId!!, req.content)
+
             notificationRepo.save(
                 NotificationMessage(
                     employeeId = it.employeeId,
@@ -72,7 +82,10 @@ class NotificationService(
             )
         }
     }
+
 }
+
+
 @Service
 class TelegramBotService(
     private val bot: NotificationTelegramBot

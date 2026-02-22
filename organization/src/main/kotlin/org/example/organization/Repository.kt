@@ -65,10 +65,9 @@ interface EmployeeRepository : BaseRepository<Employee> {
     fun countByOrganization(organization: Organization): Long
     fun findAllByOrganization(organization: Organization): List<Employee>
     fun existsByAccountIdAndOrganization(accountId: Long, organization: Organization): Boolean
-    fun findByAccountIdAndOrganization(accountId:Long, organization: Organization): Employee?
-    fun findByIdAndOrganization(
-        id: Long,
-        organization: Organization
-    ): Employee?
+    fun findByAccountIdAndOrganization(accountId: Long, organization: Organization): Employee?
+    fun findByIdAndOrganization(id: Long, organization: Organization): Employee?
+    fun findByLocalNumberAndOrganization(localNumber: Long, organization: Organization): Employee?
+    fun findTopByOrganizationOrderByLocalNumberDesc(organization: Organization): Employee?
 
 }

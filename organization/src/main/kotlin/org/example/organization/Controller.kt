@@ -78,4 +78,11 @@ class EmployeeController(
     @PostMapping("/get-emp")
     fun getEmp(@RequestBody empRequest: EmpRequest) = employeeService.getEmp(empRequest)
 
+    @PostMapping("/get/local")
+    fun getEmployeeLocalNumber(@RequestBody localEmpRequest: LocalEmpRequest) =employeeService.getEmpLocalNumber(localEmpRequest)
+
+
+    @GetMapping("/all/current-organization")
+    fun getAllEmployeeCurrentOrganization() = employeeService.getAllEmployeesCurrenOrg()
+
 }

@@ -1,6 +1,13 @@
 package org.example.notification
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import jakarta.validation.constraints.*
+
+data class BaseMessage(
+    val code: Long? = null,
+    val message: String? = null
+)
+
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class UserInfoResponse(
@@ -22,6 +29,7 @@ data class EmpResponse(
     val position: String
 
 )
+
 
 data class ActionRequest(
     val taskId: Long,

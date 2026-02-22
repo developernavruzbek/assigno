@@ -59,7 +59,6 @@ class FeignErrorDecoder(private val objectMapper: ObjectMapper) : ErrorDecoder {
                     }
                 }
             } catch (_: Exception) {
-                // ignore parsing issues; will fallback below
             }
         }
 

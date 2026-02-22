@@ -57,18 +57,10 @@ class NotificationService(
 ) {
 
     fun sendNotification(req: ActionRequest) {
-
-        val allRecipients = (req.employees + req.ownerId).distinct()
-
         val connections = connectionService
-            .getConnections(allRecipients)
-            .filter { it.chatId != null }
-
-        println(
-            " ============================================================================================== " +
-                    "$connections"
-        )
-
+            .getConnections(req.employees).filter { it.chatId != null }
+        println(" ============================================================================================== " +
+                "$connections")
         connections.forEach {
             telegramBotService.sendMessage(it.chatId!!, req.content)
 

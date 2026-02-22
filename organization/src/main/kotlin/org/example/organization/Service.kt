@@ -83,7 +83,11 @@ interface EmployeeService{
     fun getAllByOrganizationId(organizationId: Long): List<EmployeeResponse>
     fun delete(id: Long)
     fun changeCurrentOrg(changeCurrentOrganizationRequest: ChangeCurrentOrganizationRequest)
-    fun getEmp(empRequest: EmpRequest): EmpResponse }
+    fun getEmp(empRequest: EmpRequest): EmpResponse
+    fun getEmpLocalNumber(localEmpRequest: LocalEmpRequest): EmployeeResponse
+
+    fun getAllEmployeesCurrenOrg():List<EmployeeResponse>
+}
 
 @Service
 class EmployeeServiceImpl(
@@ -96,14 +100,26 @@ class EmployeeServiceImpl(
     @Transactional
     override fun create(employeeCreateRequest: EmployeeCreateRequest) {
         validateUserExists(employeeCreateRequest.userId)
-        println("User bor===================")
+
         val activeOrganization = getActiveOrganization(employeeCreateRequest.organizationId)
+
         if (employeeRepository.existsByAccountIdAndOrganization(employeeCreateRequest.userId, activeOrganization)) {
             throw EmployeeAlreadyExistsException()
         }
-        employeeRepository.save(employeeMapper.toEntity(employeeCreateRequest, activeOrganization))
-        userClient.changeCurrentOrg(ChangeCurrentOrganizationRequest(employeeCreateRequest.userId, activeOrganization.id!!))
 
+        val nextLocalNumber = getNextLocalNumber(activeOrganization)
+
+        val entity = employeeMapper.toEntity(employeeCreateRequest, activeOrganization)
+        entity.localNumber = nextLocalNumber
+
+        employeeRepository.save(entity)
+
+        userClient.changeCurrentOrg(
+            ChangeCurrentOrganizationRequest(
+                employeeCreateRequest.userId,
+                activeOrganization.id!!
+            )
+        )
     }
 
     override fun getOne(id: Long): EmployeeResponse {
@@ -178,8 +194,29 @@ class EmployeeServiceImpl(
             id  = emp.id!!,
             userId = emp.accountId,
             orgId = emp.organization.id!!,
-            position = emp.position
+            position = emp.position,
+            localNumber = emp.localNumber
+
         )
+    }
+
+    override fun getEmpLocalNumber(localEmpRequest: LocalEmpRequest): EmployeeResponse {
+        val organization = organizationRepository.findByIdAndActive(localEmpRequest.orgId, true)
+            ?:throw OrganizationNotFoundException()
+        val employee =
+            employeeRepository.findByLocalNumberAndOrganization(localEmpRequest.localNumber, organization)
+                ?:throw EmployeeNotFoundException()
+
+        return employeeMapper.toDto(employee)
+    }
+
+    override fun getAllEmployeesCurrenOrg():List<EmployeeResponse> {
+        val organization = organizationRepository.findByIdAndActive(currentOrgId()!!, true)
+            ?:throw OrganizationNotFoundException()
+        val employees = employeeRepository.findAllByOrganization(organization)
+        return employees.map {
+            employee -> employeeMapper.toDto(employee)
+        }
     }
 
 
@@ -195,4 +232,10 @@ class EmployeeServiceImpl(
     private fun getActiveOrganization(id: Long) =
         organizationRepository.findByIdAndActive(id, true)
             ?: throw OrganizationNotFoundException()
+
+
+    private fun getNextLocalNumber(org: Organization): Long {
+        val lastEmp = employeeRepository.findTopByOrganizationOrderByLocalNumberDesc(org)
+        return (lastEmp?.localNumber ?: 0) + 1
+    }
 }

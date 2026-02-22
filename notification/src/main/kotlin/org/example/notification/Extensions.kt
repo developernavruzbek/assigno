@@ -39,11 +39,6 @@ fun String.decompress(): String {
     return GZIPInputStream(ByteArrayInputStream(bytes)).bufferedReader(Charsets.UTF_8).use { it.readText() }
 }
 
-/*
-fun username(): String {
-    return getUserJwtPrincipal()?.claims?.get(USERNAME_KEY) as String
-}
-*/
 fun username(): String {
     val jwt = getUserJwtPrincipal() ?: return "unknown"
 

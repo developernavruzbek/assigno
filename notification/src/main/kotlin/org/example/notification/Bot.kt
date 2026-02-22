@@ -35,7 +35,8 @@ class NotificationTelegramBot(
             )
 
             if (success)
-                execute(SendMessage(msg.chatId.toString(), "✅ Telegram hisobingiz ${organizationClient.getOne(currentOrgId()!!).name} korxona botiga bog‘landi!"))
+                execute(SendMessage(msg.chatId.toString(),
+                    "✅ Telegram hisobingiz korxona botiga bog‘landi!"))
             else
                 execute(SendMessage(msg.chatId.toString(), "❌ Token xato yoki eskirgan."))
         }

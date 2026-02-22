@@ -37,39 +37,35 @@ class OrganizationMapper{
 
 @Component
 class EmployeeMapper{
-    fun toEntity(employeeCreateRequest: EmployeeCreateRequest, organization: Organization): Employee{
-        employeeCreateRequest.run {
-            return Employee(
-                accountId = userId,
-                organization = organization,
-                position = position
-            )
-        }
+    fun toEntity(req: EmployeeCreateRequest, org: Organization): Employee {
+        return Employee(
+            accountId = req.userId,
+            organization = org,
+            position = req.position,
+            localNumber = 0
+        )
     }
 
-    fun toDto(employee: Employee): EmployeeResponse{
-        employee.run {
-            return EmployeeResponse(
-                id  = id!!,
-                userId = accountId,
-                organizationId = organization.id!!,
-                organizationName = organization.name,
-                position = position
-            )
-        }
+    fun toDto(employee: Employee): EmployeeResponse {
+        return EmployeeResponse(
+            id = employee.id!!,
+            userId = employee.accountId,
+            organizationId = employee.organization.id!!,
+            organizationName = employee.organization.name,
+            position = employee.position,
+            localNumber = employee.localNumber
+        )
     }
 
-    fun toFullResponse(employee: Employee, userResponse: UserResponse): EmployeeResponseOrganization{
-        employee.run {
-            return EmployeeResponseOrganization(
-                id = id!!,
-                userId = userResponse.id!!,
-                fullName = userResponse.fullName,
-                phoneNumber = userResponse.phoneNumber,
-                age  = userResponse.age,
-                position = position
-            )
-        }
+    fun toFullResponse(employee: Employee, user: UserResponse): EmployeeResponseOrganization {
+        return EmployeeResponseOrganization(
+            id = employee.id!!,
+            userId = user.id!!,
+            fullName = user.fullName,
+            phoneNumber = user.phoneNumber,
+            age = user.age,
+            position = employee.position,
+            localNumber = employee.localNumber
+        )
     }
-
 }

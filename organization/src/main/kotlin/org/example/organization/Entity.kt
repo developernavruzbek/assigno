@@ -76,5 +76,8 @@ class Employee(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    var position: Position
+    var position: Position,
+
+    @Column(nullable = false)
+    var localNumber: Long
 ) : BaseEntity()

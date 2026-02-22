@@ -594,15 +594,19 @@ class AccountTaskServiceImpl(
 
     @Transactional
     override fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse {
-        checkPosition(organizationClient)
+      //  println("1 =========================================")
+       // checkPosition(organizationClient)
+       // println("2 ====================")
 
-        val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
+       /* val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
             ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
+
+
 
         if (task.ownerAccountId != userId()) {
             throw ForbiddenException("You can't disallow account, you aren't the task owner")
         }
-
+ */
         val accountTask = checkAndBuild(request)
         val saved = accountTaskRepository.saveAndRefresh(accountTask)
 
@@ -622,8 +626,9 @@ class AccountTaskServiceImpl(
 
         if (task.ownerAccountId != userId())
             throw ForbiddenException("You can't assign, you aren't task owner")
-
-        organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
+        println("AccountId :${request.accountId}")
+      //  organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
+        println("AccountId: ${request.accountId}")
 
         if (accountTaskRepository.existsByTaskIdAndAccountIdAndDeletedFalse(request.taskId, request.accountId))
             throw AccountAlreadyAssignedException(

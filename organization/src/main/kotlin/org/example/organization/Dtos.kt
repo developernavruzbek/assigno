@@ -111,7 +111,8 @@ data class EmployeeResponseOrganization(
     val fullName: String,
     val phoneNumber: String,
     val age: Long,
-    val position: Position
+    val position: Position,
+    val localNumber: Long     // ← qo‘shildi
 )
 
 data class EmployeeResponse(
@@ -119,7 +120,8 @@ data class EmployeeResponse(
     val userId: Long,
     val organizationId: Long,
     val organizationName: String,
-    val position: Position
+    val position: Position,
+    val localNumber: Long     // ← qo‘shildi
 )
 
 
@@ -132,6 +134,11 @@ data class EmpResponse(
     val id:Long,
     val userId:Long,
     val orgId:Long,
-    val position: Position
+    val position: Position,
+    val localNumber: Long
+)
 
+data class LocalEmpRequest(
+    val localNumber: Long,
+    val orgId:Long
 )

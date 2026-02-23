@@ -819,7 +819,9 @@ class TaskActionServiceImpl(
         val now = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
 
         val actorFullName = try { userClient.getUserById(currentUserId).fullName } catch (e: Exception)  { "User Not Found with ID: $currentUserId ${e.message}" }
-        val orgName = try { organizationClient.getOne(task.board.project.organizationId).name } catch (e: Exception) { "Organization Not Found with ID: ${task.board.project.organizationId} ${e.message}" }
+       // val orgName = try { organizationClient.getOne(task.board.project.organizationId).name } catch (e: Exception) { "Organization Not Found with ID: ${task.board.project.organizationId} ${e.message}" }
+        val orgName = try { organizationClient.getOne(currentOrgId()!!).name } catch (e: Exception) { "Organization Not Found with ID: ${task.board.project.organizationId} ${e.message}" }
+
 
         val actionHeader = when(type) {
             TaskActionType.CREATED -> "🆕 Yangi topshiriq yaratildi"

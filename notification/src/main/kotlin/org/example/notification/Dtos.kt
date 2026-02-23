@@ -32,7 +32,7 @@ data class EmpResponse(
 
 
 data class ActionRequest(
-    val taskId: Long,
+   // val organizationId: Long,
     val content: String,
     val employeeLocalNumbers: List<Long>
 )

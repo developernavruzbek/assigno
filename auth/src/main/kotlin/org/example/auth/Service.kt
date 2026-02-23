@@ -1,5 +1,6 @@
 package org.example.auth
 
+import org.example.auth.constants.JWT_CURRENT_ORG_ID_KEY
 import org.example.auth.enums.Role
 import org.example.auth.enums.UserStatus
 import org.example.auth.exceptions.PhoneNumberAlreadyExistsException
@@ -100,7 +101,8 @@ open class UserServiceImpl(
         SecurityContextHolder.getContext().authentication = principal
 
         clearOldAuthorizations(user.username)
-        println("✔ Organization changed. Old tokens removed. User must re-login.")
+        println("✔ Organization changed. Old tokens removed. User must re-login. ")
+        println("Current org: $JWT_CURRENT_ORG_ID_KEY")
     }
 
 

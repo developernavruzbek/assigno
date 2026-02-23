@@ -33,9 +33,6 @@ class ProjectServiceImpl(
     override fun create(request: ProjectCreateRequest): ProjectResponse {
         checkPosition(organizationClient)
 
-        //   val orgId = currentOrgId() ?: throw OrganizationDidNotFoundException("Organization not found")
-
-
         val exist =
             projectRepository.existsByNameAndOrganizationIdAndDeletedFalse(request.name, currentOrgId()!!)
 
@@ -948,10 +945,9 @@ class TaskActionServiceImpl(
         sb.append("🔗 [Topshiriqni Postmandan ko'rish](")
             .append("http://localhost:8080/api/v1/task/tasks/")
             .append(task.id)
-            .append(")");
+            .append(")")
         return sb.toString()
     }
-
 }
 
 private fun checkPosition(organizationClient: OrganizationClient) {

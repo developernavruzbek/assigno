@@ -71,15 +71,3 @@ class TaskMapper(
         }
     }
 }
-
-
-
-@Component
-class AccountTaskMapper {
-    fun toDto(accountTask: AccountTask): AccountTaskResponse {
-        return AccountTaskResponse(
-            localNumber = accountTask.localNumber
-        )
-    }
-
-}

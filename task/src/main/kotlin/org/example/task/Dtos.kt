@@ -80,7 +80,7 @@ data class TaskStateCreateRequest(
     @field:Size(max = 60)
     val code: String,
 
-    val prevStateId: Long? // <-- yangi qo'shildi
+    val prevStateId: Long?
 )
 
 data class TaskStateUpdateRequest(
@@ -102,10 +102,6 @@ data class TaskStateChangeRequest(
     @field:NotBlank
     @field:Size(max = 60)
     val code: String,
-)
-
-data class TaskStateMoveRequest(
-    val direction: String // UP yoki DOWN
 )
 
 data class TaskMoveRequest(
@@ -189,15 +185,6 @@ data class EmpResponse(
 data class LocalEmpRequest(
     val localNumber: Long,
     val orgId:Long
-)
-
-data class EmployeeResponse(
-    val id: Long,
-    val userId: Long,
-    val organizationId: Long,
-    val organizationName: String,
-    val position: String,
-    val localNumber: Long
 )
 
 data class ActionRequest(

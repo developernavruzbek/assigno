@@ -62,7 +62,6 @@ class GlobalExceptionHandler {
 
             is ForbiddenException -> HttpStatus.FORBIDDEN
             is BadRequestException -> HttpStatus.BAD_REQUEST
-            else -> HttpStatus.BAD_REQUEST
         }
         return buildResponse(status, ex.errorCode.name, ex.message, request)
     }

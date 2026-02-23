@@ -20,9 +20,8 @@ interface BaseRepository<T : BaseEntity> :
 
     fun findByIdAndDeletedFalse(id: Long): T?
 
-    fun trash(id: Long): Boolean  // <-- boolean
-
     fun findAllNotDeleted(): List<T>
+
     fun findAllNotDeletedForPageable(pageable: Pageable): Page<T>
 
     fun saveAndRefresh(t: T): T
@@ -39,16 +38,6 @@ class BaseRepositoryImpl<T : BaseEntity>(
 
     override fun findByIdAndDeletedFalse(id: Long) =
         findByIdOrNull(id)?.run { if (this.deleted) null else this }
-
-    @Transactional
-    override fun trash(id: Long): Boolean {
-        val entity = findByIdOrNull(id) ?: return false
-        if (entity.deleted) return false
-
-        entity.deleted = true
-        save(entity)
-        return true
-    }
 
     override fun findAllNotDeleted(): List<T> = findAll(isNotDeletedSpecification)
 

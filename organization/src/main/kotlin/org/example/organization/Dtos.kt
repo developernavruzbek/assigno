@@ -98,7 +98,6 @@ data class EmployeeCreateRequest(
     var position: Position
 )
 
-// todo boshqattan korib chiqish kerak
 data class EmployeeUpdateRequest(
     val userId: Long? = null,
     val organizationId: Long? = null,
@@ -112,7 +111,7 @@ data class EmployeeResponseOrganization(
     val phoneNumber: String,
     val age: Long,
     val position: Position,
-    val localNumber: Long     // ← qo‘shildi
+    val localNumber: Long
 )
 
 data class EmployeeResponse(
@@ -121,7 +120,7 @@ data class EmployeeResponse(
     val organizationId: Long,
     val organizationName: String,
     val position: Position,
-    val localNumber: Long     // ← qo‘shildi
+    val localNumber: Long
 )
 
 

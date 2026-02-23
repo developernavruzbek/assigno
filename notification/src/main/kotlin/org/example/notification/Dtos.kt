@@ -2,7 +2,6 @@ package org.example.notification
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class UserInfoResponse(
     val id: Long,
@@ -23,7 +22,6 @@ data class EmpResponse(
     val position: String,
     val localNumber: Long
 )
-
 
 data class ActionRequest(
     val content: String,

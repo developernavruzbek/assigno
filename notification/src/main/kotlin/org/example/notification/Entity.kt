@@ -47,22 +47,19 @@ class BaseEntity(
 
 @Entity
 class TelegramConnection(
-
     val employeeLocalNumber: Long,
 
-    val organizationId: Long,
-
-    var organizationName: String? = null,
-
+    // binding data
     var chatId: Long? = null,
     var telegramUserId: Long? = null,
     var linkedAt: Instant? = null,
+    var organizationName: String? = null,
 
     var linkToken: String? = null,
     var tokenExpiresAt: Instant? = null,
     var tokenUsed: Boolean = false
-
 ) : BaseEntity()
+
 @Entity
 class NotificationMessage(
 

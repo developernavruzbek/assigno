@@ -51,12 +51,10 @@ class ResourceServerConfig(
             val username = userDetails?.username ?: username()
             val authorities = mutableListOf<SimpleGrantedAuthority>()
 
-            // 1) FEIGN HEADER → kelgan bo‘lsa
             if (userDetails?.role != null) {
                 authorities.add(SimpleGrantedAuthority("ROLE_${userDetails.role}"))
             }
 
-            // 2) TOKEN ichidagi ROLE → fallback
             val tokenRole = source.getClaim<String>(ROLE_KEY)
             if (!tokenRole.isNullOrBlank()) {
                 authorities.add(SimpleGrantedAuthority("ROLE_$tokenRole"))

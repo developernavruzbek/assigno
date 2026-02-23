@@ -71,32 +71,38 @@ class GlobalExceptionHandler {
         return buildResponse(
             HttpStatus.valueOf(ex.statusCode.value()),
             "INTERNAL_SERVICE_ERROR",
-            ex.reason ?: "Ichki servisda xatolik",
+            ex.reason ?: "Internal Server Error",
             request
         )
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationException(ex: MethodArgumentNotValidException, request: WebRequest): ResponseEntity<ErrorResponse> {
+    fun handleValidationException(
+        ex: MethodArgumentNotValidException,
+        request: WebRequest
+    ): ResponseEntity<ErrorResponse> {
         val errors = ex.bindingResult.fieldErrors.joinToString(", ") { "${it.field}: ${it.defaultMessage}" }
         return buildResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", errors, request)
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
-    fun handleTypeMismatch(ex: MethodArgumentTypeMismatchException, request: WebRequest): ResponseEntity<ErrorResponse> {
-        val message = "Parametr '${ex.name}' noto'g'ri turda. Kutilgan: ${ex.requiredType?.simpleName}"
+    fun handleTypeMismatch(
+        ex: MethodArgumentTypeMismatchException,
+        request: WebRequest
+    ): ResponseEntity<ErrorResponse> {
+        val message = "Parameter '${ex.name}' was not allowed. Warning: ${ex.requiredType?.simpleName}"
         return buildResponse(HttpStatus.BAD_REQUEST, "TYPE_MISMATCH", message, request)
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleNotReadable(ex: HttpMessageNotReadableException, request: WebRequest): ResponseEntity<ErrorResponse> {
-        return buildResponse(HttpStatus.BAD_REQUEST, "JSON_ERROR", "JSON formatida xato yoki body bo'sh", request)
+        return buildResponse(HttpStatus.BAD_REQUEST, "JSON_ERROR", "Error in JSON format or body is empty", request)
     }
 
     @ExceptionHandler(Exception::class)
     fun handleGlobalException(ex: Exception, request: WebRequest): ResponseEntity<ErrorResponse> {
         val log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
-        log.error("Kutilmagan xato: ", ex)
+        log.error("Unexpected error: ", ex)
 
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", ex.message, request)
     }
@@ -112,7 +118,7 @@ class GlobalExceptionHandler {
             status = status.value(),
             error = status.reasonPhrase,
             code = code,
-            message = message ?: "Kutilmagan xato yuz berdi",
+            message = message ?: "An unexpected error occurred",
             path = request.getDescription(false).removePrefix("uri=")
         )
         return ResponseEntity(response, status)

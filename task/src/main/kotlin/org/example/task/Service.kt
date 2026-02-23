@@ -4,6 +4,8 @@ import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 
 /**
@@ -31,20 +33,22 @@ class ProjectServiceImpl(
     override fun create(request: ProjectCreateRequest): ProjectResponse {
         checkPosition(organizationClient)
 
-        val orgId = currentOrgId() ?: throw OrganizationDidNotFoundException("Organization not found")
+        //   val orgId = currentOrgId() ?: throw OrganizationDidNotFoundException("Organization not found")
+
+
+        val exist =
+            projectRepository.existsByNameAndOrganizationIdAndDeletedFalse(request.name, currentOrgId()!!)
+
+        if (exist)
+            throw ProjectAlreadyExistsException("Project Already Exists")
 
         val project = Project(
             name = request.name,
             description = request.description,
-            organizationId = orgId
+            organizationId = currentOrgId()!!
         )
+        return projectMapper.toDto(projectRepository.save(project))
 
-        try {
-            val saved = projectRepository.save(project)
-            return projectMapper.toDto(saved)
-        } catch (ex: DataIntegrityViolationException) {
-            throw ProjectAlreadyExistsException("Project already exists with name: ${request.name} ex : ${ex.message}")
-        }
     }
 
     override fun getById(projectId: Long): ProjectResponse {
@@ -127,6 +131,9 @@ class BoardServiceImpl(
         checkPosition(organizationClient)
 
         val project = getProjectOrThrow(request.projectId)
+
+        if (project.organizationId!=currentOrgId())
+            throw ProjectNotFoundException("This organization does not have this project")
 
         if (boardRepository.existsByNameAndProjectIdAndDeletedFalse(request.name, project.id!!))
             throw BoardAlreadyExistsException(
@@ -381,11 +388,15 @@ class TaskServiceImpl(
     @Transactional
     override fun create(request: TaskCreateRequest): TaskResponse {
         val board = getBoard(request.boardId)
+        if (board.project.organizationId!=currentOrgId())
+            throw ProjectNotFoundException("This organization does not have this project")
+
+
         validateTaskUniqueness(request.name, board.id!!)
         val defaultState = getDefaultState(board.id!!)
-        val  emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
 
-        val task = buildTask(request, board, defaultState,emp.localNumber)
+        val task = buildTask(request, board, defaultState, emp.localNumber)
         val saved = taskRepository.save(task)
 
         val allEmployee = accountTaskService.getAllEmployee(saved.id!!).toMutableList()
@@ -395,7 +406,7 @@ class TaskServiceImpl(
             task = saved,
             type = TaskActionType.CREATED,
             comment = "New Task created",
-           // employeeLocalNumbers = allEmployee
+            // employeeLocalNumbers = allEmployee
         )
 
         return taskMapper.toDto(saved, mutableListOf())
@@ -566,7 +577,7 @@ class TaskServiceImpl(
                 "Default TODO state not found for board $boardId"
             )
 
-    private fun buildTask(request: TaskCreateRequest, board: Board, state: TaskState, employeeLocalNumber:Long) = Task(
+    private fun buildTask(request: TaskCreateRequest, board: Board, state: TaskState, employeeLocalNumber: Long) = Task(
         ownerLocalNumber = employeeLocalNumber,
         name = request.name,
         description = request.description,
@@ -588,7 +599,7 @@ interface AccountTaskService {
     fun getAllByTaskId(taskId: Long): List<AccountTaskResponse>
     fun disallow(taskId: Long, localNumber: Long)
     fun getAccountIdsByTaskId(taskId: Long): MutableList<Long>
-    fun getAllEmployee(taskId:Long):List<Long>
+    fun getAllEmployee(taskId: Long): List<Long>
 }
 
 @Service
@@ -601,19 +612,19 @@ class AccountTaskServiceImpl(
 
     @Transactional
     override fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse {
-      //  println("1 =========================================")
-       // checkPosition(organizationClient)
-       // println("2 ====================")
+        //  println("1 =========================================")
+        // checkPosition(organizationClient)
+        // println("2 ====================")
 
-       /* val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
-            ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
+        /* val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
+             ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
 
 
 
-        if (task.ownerAccountId != userId()) {
-            throw ForbiddenException("You can't disallow account, you aren't the task owner")
-        }
- */
+         if (task.ownerAccountId != userId()) {
+             throw ForbiddenException("You can't disallow account, you aren't the task owner")
+         }
+  */
         val accountTask = checkAndBuild(request)
         val saved = accountTaskRepository.saveAndRefresh(accountTask)
         val employeeLocal = organizationClient.getEmployeeLocal(LocalEmpRequest(saved.localNumber, currentOrgId()!!))
@@ -621,7 +632,7 @@ class AccountTaskServiceImpl(
             task = saved.task,
             type = TaskActionType.ASSIGNED,
             newValue = employeeLocal.userId.toString(),
-        //    employeeIds = getAllEmployee(saved.task.id!!)
+            //    employeeIds = getAllEmployee(saved.task.id!!)
         )
 
         return AccountTaskResponse(localNumber = saved.localNumber)
@@ -635,10 +646,10 @@ class AccountTaskServiceImpl(
 
         if (task.ownerLocalNumber != emp.localNumber)
             throw ForbiddenException("You can't assign, you aren't task owner")
-      //  println("AccountId :${request.accountId}")
-      //  organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
+        //  println("AccountId :${request.accountId}")
+        //  organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
         organizationClient.getEmployeeLocal(LocalEmpRequest(request.localNumber, currentOrgId()!!))
-      //  println("AccountId: ${request.accountId}")
+        //  println("AccountId: ${request.accountId}")
 
         if (accountTaskRepository.existsByTaskIdAndLocalNumberAndDeletedFalse(request.taskId, request.localNumber))
             throw AccountAlreadyAssignedException(
@@ -700,7 +711,7 @@ interface TaskActionService {
         oldValue: String? = null,
         newValue: String? = null,
         comment: String? = null,
-       // employeeLocalNumbers: List<Long>
+        // employeeLocalNumbers: List<Long>
     )
 }
 
@@ -778,7 +789,8 @@ class TaskActionServiceImpl(
     //private val accountTaskService: AccountTaskService
 ) : TaskActionService {
 
-    override fun log(task: Task, type: TaskActionType, oldValue: String?, newValue: String?, comment: String?
+    override fun log(
+        task: Task, type: TaskActionType, oldValue: String?, newValue: String?, comment: String?
     ) {
         val currentUserId = userId()
 
@@ -816,71 +828,98 @@ class TaskActionServiceImpl(
         comment: String?,
         currentUserId: Long
     ): String {
-        val now = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+        val now = LocalDateTime.now().format(
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        )
 
-        val actorFullName = try { userClient.getUserById(currentUserId).fullName } catch (e: Exception)  { "User Not Found with ID: $currentUserId ${e.message}" }
-       // val orgName = try { organizationClient.getOne(task.board.project.organizationId).name } catch (e: Exception) { "Organization Not Found with ID: ${task.board.project.organizationId} ${e.message}" }
-        val orgName = try { organizationClient.getOne(currentOrgId()!!).name } catch (e: Exception) { "Organization Not Found with ID: ${task.board.project.organizationId} ${e.message}" }
+        val actorFullName = try {
+            userClient.getUserById(currentUserId).fullName
+        } catch (e: Exception) {
+            "User Not Found with ID: $currentUserId. Exception message: ${e.message}"
+        }
+
+        val orgName = try {
+            organizationClient.getOne(currentOrgId()!!).name
+        } catch (e: Exception) {
+            "Organization Not Found with ID: ${task.board.project.organizationId} ${e.message}"
+        }
 
 
-        val actionHeader = when(type) {
-            TaskActionType.CREATED -> "🆕 Yangi topshiriq yaratildi"
-            TaskActionType.UPDATED -> "📝 Topshiriq tahrirlandi"
-            TaskActionType.MOVED_FORWARD,
-            TaskActionType.MOVED_BACKWARD -> "📊 Holat o'zgartirildi"
-            TaskActionType.FILE_UPLOADED -> "📎 Yangi fayl yuklandi"
-            TaskActionType.FILE_DELETED -> "🗑 Fayl o'chirildi"
-            TaskActionType.TASK_ALL_FILES_DELETED -> "⚠️ Barcha fayllar o'chirildi"
-            TaskActionType.DELETED -> "🚫 Topshiriq o'chirildi"
-            TaskActionType.ASSIGNED -> "👤 Mas'ul biriktirildi"
-            TaskActionType.UNASSIGNED -> "👤 Mas'ul chetlatildi"
+        val actionHeader = when (type) {
+            TaskActionType.CREATED -> "🟢🆕 YANGI TOPSHIRIQ YARATILDI"
+            TaskActionType.UPDATED -> "📝 TOPSHIRIQ TAHRIRLANDI"
+            TaskActionType.MOVED_FORWARD -> "📈 HOLAT OLDINGA O'ZGARTIRILDI"
+            TaskActionType.MOVED_BACKWARD -> "📉 HOLAT ORQAGA QAYTARILDI"
+            TaskActionType.FILE_UPLOADED -> "📎 YANGI FAYL YUKLANDI"
+            TaskActionType.FILE_DELETED -> "🗑 FAYL O'CHIRILDI"
+            TaskActionType.TASK_ALL_FILES_DELETED -> "⚠️ BARCHA FAYLLAR O'CHIRILDI"
+            TaskActionType.DELETED -> "🚫 TOPSHIRIQ O'CHIRILDI"
+            TaskActionType.ASSIGNED -> "🎯 MAS'UL BIRIKTIRILDI"
+            TaskActionType.UNASSIGNED -> "❌ MAS'UL CHETLATILDI"
         }
 
         val sb = StringBuilder()
-        sb.append("$actionHeader\n\n")
-        sb.append("🕒 $now\n")
+        sb.append("$actionHeader\n")
+        sb.append("━━━━━━━━━━━━━━━━━━━━━\n\n")
+
+        sb.append("👤 Bajaruvchi: $actorFullName\n")
+        sb.append("📌 Topshiriq: ${task.name}\n\n")
+
         sb.append("🏢 Tashkilot: $orgName\n")
         sb.append("📚 Loyiha: ${task.board.project.name}\n")
-        sb.append("👨‍💻 Harakat egasi: $actorFullName\n")
-        sb.append("📌 Topshiriq: ${task.name}\n\n")
+        sb.append("🕒 Vaqt: $now\n\n")
 
         when (type) {
             TaskActionType.ASSIGNED -> {
                 val assignedUserId = newValue?.toLongOrNull()
-                val assignedUserName = if (assignedUserId != null) {
-                    try { userClient.getUserById(assignedUserId).fullName } catch (e: Exception) { "ID: $assignedUserId" }
-                } else "Noma'lum"
-                sb.append("✅ $assignedUserName ushbu topshiriqqa mas'ul etib belgilandi.")
+                val assignedUserName = assignedUserId?.let {
+                    try {
+                        userClient.getUserById(it).fullName
+                    } catch (e: Exception) {
+                        "ID: $it. Exception message: ${e.message}"
+                    }
+                } ?: "Noma'lum"
+                sb.append("👥 Mas'ul o‘zgarishi: ✅ $assignedUserName topshiriqqa biriktirildi\n")
             }
+
             TaskActionType.UNASSIGNED -> {
                 val unassignedUserId = oldValue?.toLongOrNull()
-                val unassignedUserName = if (unassignedUserId != null) {
-                    try { userClient.getUserById(unassignedUserId).fullName } catch (e: Exception) { "ID: $unassignedUserId" }
-                } else "Noma'lum"
-                sb.append("❌ $unassignedUserName topshiriq mas'ul ro'yxatidan chiqarildi.")
+                val unassignedUserName = unassignedUserId?.let {
+                    try {
+                        userClient.getUserById(it).fullName
+                    } catch (e: Exception) {
+                        "ID: $it. Exception message: ${e.message}"
+                    }
+                } ?: "Noma'lum"
+                sb.append("👥 Mas’ul o‘zgarishi: ❌ $unassignedUserName topshiriqdan chetlatildi\n")
             }
-            TaskActionType.FILE_UPLOADED -> {
-                sb.append("📁 Fayl nomi: $newValue\n")
+
+            TaskActionType.FILE_UPLOADED -> sb.append("📎 Fayl: ✅ $newValue yuklandi\n")
+            TaskActionType.FILE_DELETED -> sb.append("📎 Fayl: ❌ $oldValue o'chirildi\n")
+            TaskActionType.TASK_ALL_FILES_DELETED -> sb.append("📎 Barcha fayllar tizimdan olib tashlandi!\n")
+            TaskActionType.MOVED_FORWARD,
+            TaskActionType.MOVED_BACKWARD -> {
+                sb.append("🔄 Holat o'zgarishi:\n")
+                sb.append("🔸  $oldValue ➡️ $newValue\n")
             }
-            TaskActionType.FILE_DELETED -> {
-                sb.append("❌ O'chirilgan ma'lumot: $oldValue\n")
-            }
-            TaskActionType.TASK_ALL_FILES_DELETED -> {
-                sb.append("ℹ️ Topshiriqqa biriktirilgan barcha hujjatlar tizimdan olib tashlandi.\n")
-            }
+
             else -> {
-                if (!comment.isNullOrBlank()) sb.append("🔄 Batafsil:\n$comment\n")
+                if (!comment.isNullOrBlank()) sb.append("💬 Izoh:\n$comment\n\n")
                 if (oldValue != null && newValue != null) {
-                    sb.append("🔄 O'zgarish: $oldValue ➡️ $newValue\n")
+                    sb.append("🔄 O'zgarishlar:\n")
+                    sb.append("🔸 Oldingi holat: $oldValue ➡️ Yangi holat: $newValue\n")
                 }
             }
         }
 
-
-        sb.append("\n🔗 [Topshiriqni ko'rish](http://your-app.uz/tasks/${task.id})")
-
+        sb.append("\n━━━━━━━━━━━━━━━━━━━━━\n")
+        sb.append("🔗 [Topshiriqni Postmandan ko'rish](")
+            .append("http://localhost:8080/api/v1/task/tasks/")
+            .append(task.id)
+            .append(")");
         return sb.toString()
     }
+
 }
 
 /// controllerga ko'chirish

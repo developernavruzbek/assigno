@@ -23,39 +23,37 @@ class NotificationTelegramBot(
             val token = msg.text.replace("/start", "").trim()
 
             if (token.isBlank()) {
-                execute(SendMessage(msg.chatId.toString(), "❗ Token yuboring: /start <token>"))
+                execute(
+                    SendMessage(
+                        msg.chatId.toString(),
+                        "❗️ Iltimos, tokenni yuboring:\n/start <token>"
+                    )
+                )
                 return
             }
 
-            val result = connectionService.confirmLink(
+            val orgName = connectionService.confirmLink(
                 token = token,
                 chatId = msg.chatId,
                 telegramUserId = msg.from.id
             )
-
-            when (result) {
-                null -> execute(
+            if (orgName != null) {
+                execute(
                     SendMessage(
                         msg.chatId.toString(),
-                        "❌ Token xato yoki eskirgan."
+                        "✅ Sizning Telegram hisobingiz **$orgName** tashkilot botiga muvaffaqiyatli bog‘landi!"
                     )
                 )
-
-                "ALREADY_LINKED" -> execute(
+            } else {
+                execute(
                     SendMessage(
                         msg.chatId.toString(),
-                        "⚠️ Siz ushbu employee hisobiga allaqachon ulangan ekansiz."
-                    )
-                )
-
-                else -> execute(
-                    SendMessage(
-                        msg.chatId.toString(),
-                        "✅ Telegram hisobingiz ${result} korxonasi bilan bog‘landi!"
+                        "❌ Token xato yoki eskirgan. Iltimos, tekshirib qayta yuboring."
                     )
                 )
             }
         }
     }
+
 }
 

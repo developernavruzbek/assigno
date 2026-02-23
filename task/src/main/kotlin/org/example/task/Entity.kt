@@ -37,7 +37,7 @@ class BaseEntity(
 @Entity
 class Project(
 
-    @Column(nullable = false, unique = true, length = 124)
+    @Column(nullable = false, length = 124)
     var name: String,
 
     @Column(nullable = false)

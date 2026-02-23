@@ -8,9 +8,9 @@ plugins {
     id("org.cyclonedx.bom") version "2.3.1"
 }
 val springCloudVersion by extra("2024.0.1")
-
-group = "uz.zero"
+group = "org.example"
 version = "0.0.1-SNAPSHOT"
+description = "organization"
 
 allOpen {
     annotation("jakarta.persistence.Entity")

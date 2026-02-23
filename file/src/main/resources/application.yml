@@ -1,18 +1,13 @@
 spring:
   application:
-    name: file-service
-
+    name: file
   cloud:
     config:
-      uri: ${CONFIG_URI:http://localhost:8888}
-      password: ${CONFIG_PASSWORD:nimadirxavfsizlik}
-
+      uri: http://localhost:8888
   config:
     import: 'configserver:'
 
   profiles:
     active: local
-
-file:
-  upload-dir: uploads
-  max-size: 10485760 # 10MB
+  jpa:
+    open-in-view: false

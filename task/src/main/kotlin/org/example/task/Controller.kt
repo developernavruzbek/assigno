@@ -122,7 +122,8 @@ class TaskStateController(
 @RestController
 @RequestMapping("tasks")
 class TaskController(
-    private val taskService: TaskService
+    private val taskService: TaskService,
+    private val taskActionService: TaskActionService
 ) {
 
     @PostMapping
@@ -136,6 +137,11 @@ class TaskController(
     @GetMapping("/board/{boardId}")
     fun getAllByBoard(@PathVariable boardId: Long): List<TaskResponse> =
         taskService.getAllByBoardId(boardId)
+
+    @GetMapping("/{id}/logs")
+    fun getTaskLogs(@PathVariable id: Long): List<String> {
+        return taskActionService.logsByTaskId(id)
+    }
 
     @PutMapping("/{id}")
     fun update(

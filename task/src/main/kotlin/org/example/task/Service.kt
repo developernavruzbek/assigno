@@ -1,9 +1,9 @@
 package org.example.task
 
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -132,7 +132,7 @@ class BoardServiceImpl(
 
         val project = getProjectOrThrow(request.projectId)
 
-        if (project.organizationId!=currentOrgId())
+        if (project.organizationId != currentOrgId())
             throw ProjectNotFoundException("This organization does not have this project")
 
         if (boardRepository.existsByNameAndProjectIdAndDeletedFalse(request.name, project.id!!))
@@ -331,27 +331,6 @@ class TaskStateServiceImpl(
         taskStateRepository.decrementPositions(boardId, deletedPosition)
     }
 
-    @Transactional
-    fun moveState(stateId: Long, direction: String): TaskStateResponse {
-        val state = getByIdOrThrow(stateId)
-        val boardId = state.board.id!!
-
-        val neighbor = when (direction.uppercase()) {
-            "UP" -> taskStateRepository.findPrev(boardId, state.position)
-            "DOWN" -> taskStateRepository.findNext(boardId, state.position)
-            else -> throw IllegalArgumentException("Direction must be UP or DOWN")
-        } ?: throw IllegalStateException("Boundary reached: cannot move further in this direction")
-
-        val currentPos = state.position
-        state.position = neighbor.position
-        neighbor.position = currentPos
-
-        taskStateRepository.save(state)
-        taskStateRepository.save(neighbor)
-
-        return taskStateMapper.toDto(state)
-    }
-
     private fun getByIdOrThrow(id: Long): TaskState =
         taskStateRepository.findByIdAndDeletedFalse(id)
             ?: throw TaskStateNotFoundException("TaskState not found with id: $id")
@@ -388,7 +367,7 @@ class TaskServiceImpl(
     @Transactional
     override fun create(request: TaskCreateRequest): TaskResponse {
         val board = getBoard(request.boardId)
-        if (board.project.organizationId!=currentOrgId())
+        if (board.project.organizationId != currentOrgId())
             throw ProjectNotFoundException("This organization does not have this project")
 
 
@@ -517,8 +496,6 @@ class TaskServiceImpl(
     @Transactional
     override fun updateState(taskId: Long, request: TaskStateChangeRequest): TaskResponse {
         val task = getByIdOrThrow(taskId)
-        val currentUserId = userId()
-
         val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
 
         val isOwner = task.ownerLocalNumber == emp.localNumber
@@ -704,17 +681,6 @@ class AccountTaskServiceImpl(
     }
 }
 
-interface TaskActionService {
-    fun log(
-        task: Task,
-        type: TaskActionType,
-        oldValue: String? = null,
-        newValue: String? = null,
-        comment: String? = null,
-        // employeeLocalNumbers: List<Long>
-    )
-}
-
 @Service
 class FileIntegrationService(
     private val fileClient: FileClient,
@@ -779,6 +745,19 @@ class FileIntegrationService(
         .orElseThrow { TaskNotFoundException("Task not found with id: $taskId") }
 }
 
+
+interface TaskActionService {
+    fun log(
+        task: Task,
+        type: TaskActionType,
+        oldValue: String? = null,
+        newValue: String? = null,
+        comment: String? = null,
+    )
+
+    fun logsByTaskId(taskId: Long): List<String>
+}
+
 @Service
 class TaskActionServiceImpl(
     private val taskActionRepository: TaskActionRepository,
@@ -786,7 +765,6 @@ class TaskActionServiceImpl(
     private val organizationClient: OrganizationClient,
     private val userClient: UserClient,
     private val accountTaskRepository: AccountTaskRepository
-    //private val accountTaskService: AccountTaskService
 ) : TaskActionService {
 
     override fun log(
@@ -818,6 +796,60 @@ class TaskActionServiceImpl(
                 employeeLocalNumbers = employees
             )
         )
+    }
+
+    override fun logsByTaskId(taskId: Long): List<String> {
+        val logs = taskActionRepository.getAllByTaskIdAndDeletedFalse(taskId)
+        if (logs.isEmpty()) return emptyList()
+
+        val dateFormat = SimpleDateFormat("MM.dd HH:mm:ss")
+
+        return logs.map { log ->
+            val time = dateFormat.format(log.createdDate)
+
+            val actor = try {
+                userClient.getUserById(log.updatedBy).fullName
+            } catch (e: Exception) {
+                "ID: ${log.updatedBy} | ${e.message}"
+            }
+
+            val change = when (log.actionType) {
+                TaskActionType.ASSIGNED -> {
+                    val name = log.newValue?.toLongOrNull()?.let {
+                        try {
+                            userClient.getUserById(it).fullName
+                        } catch (e: Exception) {
+                            "ID: $it | ${e.message}"
+                        }
+                    } ?: "noma'lum"
+                    "biriktirildi: $name"
+                }
+
+                TaskActionType.UNASSIGNED -> {
+                    val name = log.oldValue?.toLongOrNull()?.let {
+                        try {
+                            userClient.getUserById(it).fullName
+                        } catch (e: Exception) {
+                            "ID: $it | ${e.message}"
+                        }
+                    } ?: "noma'lum"
+                    "chetlatildi: $name"
+                }
+
+                else -> when {
+                    !log.oldValue.isNullOrBlank() && !log.newValue.isNullOrBlank() ->
+                        "${log.oldValue} dan -> ${log.newValue} ga o'zgardi"
+
+                    !log.newValue.isNullOrBlank() -> "+ ${log.newValue}"
+                    !log.oldValue.isNullOrBlank() -> "- ${log.oldValue}"
+                    else -> log.actionType.name.lowercase().replace("_", " ")
+                }
+            }
+
+            val commentStr = if (!log.comment.isNullOrBlank()) " | (${log.comment})" else ""
+
+            "[$time] | $actor | ${log.task.name} | $change  $commentStr"
+        }
     }
 
     private fun buildTelegramMessage(
@@ -922,7 +954,6 @@ class TaskActionServiceImpl(
 
 }
 
-/// controllerga ko'chirish
 private fun checkPosition(organizationClient: OrganizationClient) {
     val currentUserId = userId()
     val orgId = currentOrgId() ?: throw OrganizationDidNotFoundException("Org not found or null")

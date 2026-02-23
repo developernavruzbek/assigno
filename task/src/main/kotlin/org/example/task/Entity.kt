@@ -53,7 +53,7 @@ class Project(
 class Task(
 
     @Column(nullable = false)
-    var ownerAccountId: Long,
+    var ownerLocalNumber: Long,
 
     @Column(nullable = false, length = 150)
     var name: String,
@@ -143,7 +143,7 @@ class TaskFile(
 class AccountTask(
 
     @Column(nullable = false)
-    var accountId: Long,
+    var localNumber: Long,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)

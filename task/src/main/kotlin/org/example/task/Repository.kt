@@ -155,7 +155,7 @@ interface TaskRepository : BaseRepository<Task> {
 
 @Repository
 interface AccountTaskRepository: BaseRepository<AccountTask> {
-    fun existsByTaskIdAndAccountIdAndDeletedFalse(taskId: Long, accountId: Long): Boolean
+    fun existsByTaskIdAndLocalNumberAndDeletedFalse(taskId: Long, localNumber: Long): Boolean
 
     @Modifying
     @Transactional
@@ -163,7 +163,7 @@ interface AccountTaskRepository: BaseRepository<AccountTask> {
     fun trashAllByTaskIds(taskIds: List<Long>)
 
     fun findAllByTaskIdInAndDeletedFalse(taskIds: List<Long>): List<AccountTask>
-    fun findByTaskIdAndAccountIdAndDeletedFalse(taskId: Long, accountId: Long): AccountTask?
+    fun findByTaskIdAndLocalNumberAndDeletedFalse(taskId: Long, localNumber: Long): AccountTask?
     fun findAllByTaskIdAndDeletedFalse(taskId: Long): List<AccountTask>
 }
 

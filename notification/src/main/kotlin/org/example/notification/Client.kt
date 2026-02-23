@@ -12,7 +12,7 @@ interface OrganizationClient{
     @PostMapping("employee/get-emp")
     fun getEmp(@RequestBody empRequest: EmpRequest): EmpResponse
 
-    @GetMapping("/org/{orgId}")
+    @GetMapping("org/{orgId}")
     fun getOne(@PathVariable orgId: Long): OrganizationResponse
 
 }

@@ -201,11 +201,11 @@ class AccountTaskController(
     fun getAll(@PathVariable taskId: Long): List<AccountTaskResponse> =
         service.getAllByTaskId(taskId)
 
-    @DeleteMapping("/{taskId}/{accountId}")
+    @DeleteMapping("/{taskId}/{localNumber}")
     fun disallow(
         @PathVariable taskId: Long,
-        @PathVariable accountId: Long
-    ) = service.disallow(taskId, accountId)
+        @PathVariable localNumber: Long
+    ) = service.disallow(taskId, localNumber)
 
 
     @GetMapping("/employee/{taskId}")

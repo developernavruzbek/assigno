@@ -59,7 +59,7 @@ class TaskMapper(
         task.run {
             return TaskResponse(
                 id = id,
-                ownerAccountId = ownerAccountId,
+                ownerLocalNumber = ownerLocalNumber,
                 name = name,
                 description = description,
                 dueDate = dueDate,
@@ -78,7 +78,7 @@ class TaskMapper(
 class AccountTaskMapper {
     fun toDto(accountTask: AccountTask): AccountTaskResponse {
         return AccountTaskResponse(
-            accountId = accountTask.accountId
+            localNumber = accountTask.localNumber
         )
     }
 

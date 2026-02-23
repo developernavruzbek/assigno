@@ -150,7 +150,7 @@ data class TaskUpdateRequest(
 
 data class TaskResponse(
     val id: Long?,
-    val ownerAccountId: Long,
+    val ownerLocalNumber: Long,
     val name: String,
     val description: String,
     val dueDate: Date,
@@ -163,14 +163,14 @@ data class TaskResponse(
 
 data class AssignAccountToTaskRequest(
     @field:Positive
-    val accountId: Long,
+    val localNumber: Long,
 
     @field:Positive
     val taskId: Long
 )
 
 data class AccountTaskResponse(
-    val accountId: Long
+    val localNumber: Long
 )
 
 
@@ -183,15 +183,27 @@ data class EmpResponse(
     val id:Long,
     val userId:Long,
     val orgId:Long,
-    val position: String
+    val position: String,
+    val localNumber: Long
+)
+data class LocalEmpRequest(
+    val localNumber: Long,
+    val orgId:Long
+)
 
+data class EmployeeResponse(
+    val id: Long,
+    val userId: Long,
+    val organizationId: Long,
+    val organizationName: String,
+    val position: String,
+    val localNumber: Long
 )
 
 data class ActionRequest(
     val taskId: Long,
-    val ownerId: Long,
     val content: String,
-    val employees: List<Long>
+    val employeeLocalNumbers: List<Long>
 )
 
 data class OrganizationResponse(

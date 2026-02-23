@@ -12,28 +12,29 @@ class TelegramConnectionService(
     private val repo: TelegramConnectionRepository,
     private val organizationClient: OrganizationClient,
     @Value("\${telegram.bot.username}") private val botUsername: String
-
 ) {
     fun generateLinkToken(userId: Long, orgId: Long): String {
         val emp = organizationClient.getEmp(EmpRequest(userId, orgId))
 
         val token = UUID.randomUUID().toString()
 
-        val conn = repo.findByEmployeeId(emp.id) ?: TelegramConnection(employeeId = emp.id)
+        val conn = repo.findByEmployeeLocalNumber(emp.localNumber)
+            ?: TelegramConnection(employeeLocalNumber = emp.localNumber)
 
+        conn.organizationName = organizationClient.getOne(orgId).name
         conn.linkToken = token
         conn.tokenExpiresAt = Instant.now().plusSeconds(600)
         conn.tokenUsed = false
 
         repo.save(conn)
-        val deepLink = "https://t.me/$botUsername?start=$token"
-        return deepLink
+
+        return "https://t.me/$botUsername?start=$token"
     }
 
-    fun confirmLink(token: String, chatId: Long, telegramUserId: Long): Boolean {
-        val conn = repo.findByLinkToken(token) ?: return false
-        if (conn.tokenUsed) return false
-        if (conn.tokenExpiresAt!!.isBefore(Instant.now())) return false
+    fun confirmLink(token: String, chatId: Long, telegramUserId: Long): String? {
+        val conn = repo.findByLinkToken(token) ?: return null
+        if (conn.tokenUsed) return null
+        if (conn.tokenExpiresAt!!.isBefore(Instant.now())) return null
 
         conn.chatId = chatId
         conn.telegramUserId = telegramUserId
@@ -41,13 +42,13 @@ class TelegramConnectionService(
         conn.tokenUsed = true
 
         repo.save(conn)
-        return true
+        return conn.organizationName   // 👈 MUHIM!
     }
 
-    fun getConnections(employeeIds: List<Long>): List<TelegramConnection> =
-        repo.findAllByEmployeeIdIn(employeeIds)
-}
+    fun getConnections(employeeLocalNumbers: List<Long>): List<TelegramConnection> =
+        repo.findAllByEmployeeLocalNumberIn(employeeLocalNumbers)
 
+}
 
 @Service
 class NotificationService(
@@ -57,16 +58,17 @@ class NotificationService(
 ) {
 
     fun sendNotification(req: ActionRequest) {
+        println("======${req.employeeLocalNumbers}============")
         val connections = connectionService
-            .getConnections(req.employees).filter { it.chatId != null }
-        println(" ============================================================================================== " +
-                "$connections")
+            .getConnections(req.employeeLocalNumbers)
+            .filter { it.chatId != null }
+
         connections.forEach {
             telegramBotService.sendMessage(it.chatId!!, req.content)
 
             notificationRepo.save(
                 NotificationMessage(
-                    employeeId = it.employeeId,
+                    employeeLocalNumber = it.employeeLocalNumber,
                     message = req.content,
                     status = NotificationStatus.SENT,
                     sentAt = Instant.now()
@@ -74,7 +76,6 @@ class NotificationService(
             )
         }
     }
-
 }
 
 

@@ -21,8 +21,8 @@ interface OrganizationClient {
     @GetMapping("employee/{employeeId}")
     fun getEmployee(@PathVariable employeeId: Long): EmpResponse
 
-    @PostMapping("employee/get-employee")
-    fun getEmp2(@RequestBody empRequest: EmpRequest): EmpResponse
+    @PostMapping("employee/get/local")
+    fun getEmployeeLocal(@RequestBody localEmpRequest: LocalEmpRequest): EmpResponse
 
     @GetMapping("/org/{orgId}")
     fun getOne(@PathVariable("orgId") orgId: Long): OrganizationResponse

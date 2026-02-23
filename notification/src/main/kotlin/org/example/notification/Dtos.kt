@@ -26,16 +26,15 @@ data class EmpResponse(
     val id:Long,
     val userId:Long,
     val orgId:Long,
-    val position: String
-
+    val position: String,
+    val localNumber: Long
 )
 
 
 data class ActionRequest(
     val taskId: Long,
-    val ownerId: Long,
     val content: String,
-    val employees: List<Long>
+    val employeeLocalNumbers: List<Long>
 )
 
 data class OrganizationResponse(

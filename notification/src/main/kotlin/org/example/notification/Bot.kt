@@ -10,7 +10,6 @@ class NotificationTelegramBot(
     @Value("\${telegram.bot.token}") private val tokenValue: String,
     @Value("\${telegram.bot.username}") private val usernameValue: String,
     private val connectionService: TelegramConnectionService,
-    private val organizationClient: OrganizationClient
 ) : TelegramLongPollingBot() {
 
     override fun getBotToken(): String = tokenValue
@@ -28,17 +27,21 @@ class NotificationTelegramBot(
                 return
             }
 
-            val success = connectionService.confirmLink(
+            val orgName = connectionService.confirmLink(
                 token = token,
                 chatId = msg.chatId,
                 telegramUserId = msg.from.id
             )
-
-            if (success)
-                execute(SendMessage(msg.chatId.toString(),
-                    "✅ Telegram hisobingiz korxona botiga bog‘landi!"))
-            else
+            if (orgName != null) {
+                execute(
+                    SendMessage(
+                        msg.chatId.toString(),
+                        "✅ Telegram hisobingiz ${orgName} korxona botiga bog‘landi!"
+                    )
+                )
+            } else {
                 execute(SendMessage(msg.chatId.toString(), "❌ Token xato yoki eskirgan."))
+            }
         }
     }
 }

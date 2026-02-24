@@ -205,3 +205,9 @@ data class TaskActionResponse(
     val comment: String?,
     val createdAt: Date
 )
+
+
+data class ExistsEmployee(
+    val employeeLocalNumbers: List<Long>,
+    val orgId:Long
+)

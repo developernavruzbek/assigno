@@ -57,7 +57,8 @@ class TelegramConnection(
 
     var linkToken: String? = null,
     var tokenExpiresAt: Instant? = null,
-    var tokenUsed: Boolean = false
+    var tokenUsed: Boolean = false,
+    var organizationId: Long
 ) : BaseEntity()
 
 @Entity

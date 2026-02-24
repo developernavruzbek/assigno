@@ -139,7 +139,7 @@ class TaskController(
         taskService.getAllByBoardId(boardId)
 
     @GetMapping("/{id}/logs")
-    fun getTaskLogs(@PathVariable id: Long): List<String> {
+    fun getTaskLogs(@PathVariable id: Long): List<TaskActionResponse> {
         return taskActionService.logsByTaskId(id)
     }
 

@@ -71,3 +71,22 @@ class TaskMapper(
         }
     }
 }
+
+@Component
+class TaskActionMapper {
+
+    fun toDto(taskAction: TaskAction): TaskActionResponse {
+        taskAction.run {
+            return TaskActionResponse(
+                id = id,
+                taskId = task.id!!,
+                actionType = actionType,
+                updatedBy = updatedBy,
+                oldValue = oldValue,
+                newValue = newValue,
+                comment = comment,
+                createdAt = createdDate!!
+            )
+        }
+    }
+}

@@ -3,7 +3,6 @@ package org.example.task
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
-import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -382,7 +381,6 @@ class TaskServiceImpl(
             task = saved,
             type = TaskActionType.CREATED,
             comment = "New Task created",
-            // employeeLocalNumbers = allEmployee
         )
 
         return taskMapper.toDto(saved, mutableListOf())
@@ -426,12 +424,11 @@ class TaskServiceImpl(
         if (request.name != null && request.name != task.name) {
             changes.add("Nomi: ${task.name} -> ${request.name}")
         }
-        if (request.description != null && request.description != task.description) {
-            changes.add("Tavsifi o'zgartirildi")
-        }
+
         if (request.dueDate != null && request.dueDate != task.dueDate) {
             changes.add("Muddat: ${task.dueDate} -> ${request.dueDate}")
         }
+
         if (request.priority != null && request.priority != task.priority) {
             changes.add("Prioritet: ${task.priority} -> ${request.priority}")
         }
@@ -451,11 +448,6 @@ class TaskServiceImpl(
         return taskMapper.toDto(saved, assigns)
     }
 
-    /**
-    POST /tasks/{id}/move/forward
-
-    POST /tasks/{id}/move/backward
-     **/
     @Transactional
     override fun move(taskId: Long, request: TaskMoveRequest): TaskResponse {
 
@@ -527,9 +519,7 @@ class TaskServiceImpl(
     }
 
     private fun applyUpdates(task: Task, request: TaskUpdateRequest) {
-
         request.name?.let { task.name = it }
-        request.description?.let { task.description = it }
         request.dueDate?.let { task.dueDate = it }
         request.priority?.let { task.priority = it }
     }
@@ -586,19 +576,7 @@ class AccountTaskServiceImpl(
 
     @Transactional
     override fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse {
-        //  println("1 =========================================")
-        // checkPosition(organizationClient)
-        // println("2 ====================")
 
-        /* val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
-             ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
-
-
-
-         if (task.ownerAccountId != userId()) {
-             throw ForbiddenException("You can't disallow account, you aren't the task owner")
-         }
-  */
         val accountTask = checkAndBuild(request)
         val saved = accountTaskRepository.saveAndRefresh(accountTask)
         val employeeLocal = organizationClient.getEmployeeLocal(LocalEmpRequest(saved.localNumber, currentOrgId()!!))
@@ -606,7 +584,6 @@ class AccountTaskServiceImpl(
             task = saved.task,
             type = TaskActionType.ASSIGNED,
             newValue = employeeLocal.userId.toString(),
-            //    employeeIds = getAllEmployee(saved.task.id!!)
         )
 
         return AccountTaskResponse(localNumber = saved.localNumber)
@@ -620,10 +597,7 @@ class AccountTaskServiceImpl(
 
         if (task.ownerLocalNumber != emp.localNumber)
             throw ForbiddenException("You can't assign, you aren't task owner")
-        //  println("AccountId :${request.accountId}")
-        //  organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
         organizationClient.getEmployeeLocal(LocalEmpRequest(request.localNumber, currentOrgId()!!))
-        //  println("AccountId: ${request.accountId}")
 
         if (accountTaskRepository.existsByTaskIdAndLocalNumberAndDeletedFalse(request.taskId, request.localNumber))
             throw AccountAlreadyAssignedException(
@@ -655,19 +629,30 @@ class AccountTaskServiceImpl(
     override fun disallow(taskId: Long, localNumber: Long) {
         checkPosition(organizationClient)
 
+        val task = getAndValidateTask(taskId)
+        val entity = getAssignment(taskId, localNumber)
+
+        logAndTrash(task, entity, localNumber)
+    }
+
+    private fun getAndValidateTask(taskId: Long): Task {
         val task = taskRepository.findByIdAndDeletedFalse(taskId)
             ?: throw TaskNotFoundException("Task not found with id: $taskId")
 
         val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
-
         if (task.ownerLocalNumber != emp.localNumber) {
             throw ForbiddenException("You can't disallow account, you aren't the task owner")
         }
+        return task
+    }
 
-        val entity = accountTaskRepository.findByTaskIdAndLocalNumberAndDeletedFalse(taskId, localNumber)
+    private fun getAssignment(taskId: Long, localNumber: Long): AccountTask =
+        accountTaskRepository.findByTaskIdAndLocalNumberAndDeletedFalse(taskId, localNumber)
             ?: throw AccountTaskNotFoundException("Account $localNumber isn't assigned to task $taskId")
 
+    private fun logAndTrash(task: Task, entity: AccountTask, localNumber: Long) {
         val employeeLocal = organizationClient.getEmployeeLocal(LocalEmpRequest(localNumber, currentOrgId()!!))
+
         taskActionService.log(
             task = task,
             type = TaskActionType.UNASSIGNED,
@@ -752,7 +737,7 @@ interface TaskActionService {
         comment: String? = null,
     )
 
-    fun logsByTaskId(taskId: Long): List<String>
+    fun logsByTaskId(taskId: Long): List<TaskActionResponse>
 }
 
 @Service
@@ -761,6 +746,7 @@ class TaskActionServiceImpl(
     private val notificationClient: NotificationClient,
     private val organizationClient: OrganizationClient,
     private val userClient: UserClient,
+    private val taskActionMapper: TaskActionMapper,
     private val accountTaskRepository: AccountTaskRepository
 ) : TaskActionService {
 
@@ -795,57 +781,13 @@ class TaskActionServiceImpl(
         )
     }
 
-    override fun logsByTaskId(taskId: Long): List<String> {
+    override fun logsByTaskId(taskId: Long): List<TaskActionResponse> {
         val logs = taskActionRepository.getAllByTaskIdAndDeletedFalse(taskId)
+
         if (logs.isEmpty()) return emptyList()
 
-        val dateFormat = SimpleDateFormat("MM.dd HH:mm:ss")
-
         return logs.map { log ->
-            val time = dateFormat.format(log.createdDate)
-
-            val actor = try {
-                userClient.getUserById(log.updatedBy).fullName
-            } catch (e: Exception) {
-                "ID: ${log.updatedBy} | ${e.message}"
-            }
-
-            val change = when (log.actionType) {
-                TaskActionType.ASSIGNED -> {
-                    val name = log.newValue?.toLongOrNull()?.let {
-                        try {
-                            userClient.getUserById(it).fullName
-                        } catch (e: Exception) {
-                            "ID: $it | ${e.message}"
-                        }
-                    } ?: "noma'lum"
-                    "biriktirildi: $name"
-                }
-
-                TaskActionType.UNASSIGNED -> {
-                    val name = log.oldValue?.toLongOrNull()?.let {
-                        try {
-                            userClient.getUserById(it).fullName
-                        } catch (e: Exception) {
-                            "ID: $it | ${e.message}"
-                        }
-                    } ?: "noma'lum"
-                    "chetlatildi: $name"
-                }
-
-                else -> when {
-                    !log.oldValue.isNullOrBlank() && !log.newValue.isNullOrBlank() ->
-                        "${log.oldValue} dan -> ${log.newValue} ga o'zgardi"
-
-                    !log.newValue.isNullOrBlank() -> "+ ${log.newValue}"
-                    !log.oldValue.isNullOrBlank() -> "- ${log.oldValue}"
-                    else -> log.actionType.name.lowercase().replace("_", " ")
-                }
-            }
-
-            val commentStr = if (!log.comment.isNullOrBlank()) " | (${log.comment})" else ""
-
-            "[$time] | $actor | ${log.task.name} | $change  $commentStr"
+            taskActionMapper.toDto(log)
         }
     }
 

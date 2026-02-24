@@ -13,7 +13,6 @@ data class UserInfoResponse(
     val role: String,
 )
 
-
 data class ProjectCreateRequest(
     @field:NotBlank
     @field:Size(max = 124)
@@ -70,7 +69,6 @@ data class BoardResponse(
     val taskStates: List<TaskStateResponse>
 )
 
-
 data class TaskStateCreateRequest(
     @field:NotBlank
     @field:Size(max = 72)
@@ -108,8 +106,6 @@ data class TaskMoveRequest(
     val direction: MoveDirection // FORWARD or BACKWARD
 )
 
-
-
 data class TaskCreateRequest(
     @field:NotBlank
     @field:Size(max = 150)
@@ -133,9 +129,6 @@ data class TaskUpdateRequest(
     @field:Size(max = 150)
     val name: String?,
 
-    @field:Size(max = 2000)
-    val description: String?,
-
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy")
     @field:FutureOrPresent
     val dueDate: Date?,
@@ -156,7 +149,6 @@ data class TaskResponse(
     val taskAssigns: MutableList<Long>
 )
 
-
 data class AssignAccountToTaskRequest(
     @field:Positive
     val localNumber: Long,
@@ -168,7 +160,6 @@ data class AssignAccountToTaskRequest(
 data class AccountTaskResponse(
     val localNumber: Long
 )
-
 
 data class EmpRequest(
     val userId:Long,
@@ -182,6 +173,7 @@ data class EmpResponse(
     val position: String,
     val localNumber: Long
 )
+
 data class LocalEmpRequest(
     val localNumber: Long,
     val orgId:Long
@@ -201,4 +193,15 @@ data class OrganizationResponse(
 data class UserResponse(
     val id: Long,
     val fullName: String,
+)
+
+data class TaskActionResponse(
+    val id: Long?,
+    val taskId: Long,
+    val actionType: TaskActionType,
+    val updatedBy: Long,
+    val oldValue: String?,
+    val newValue: String?,
+    val comment: String?,
+    val createdAt: Date
 )

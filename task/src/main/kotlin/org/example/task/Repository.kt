@@ -66,7 +66,6 @@ class BaseRepositoryImpl<T : BaseEntity>(
 @Repository
 interface ProjectRepository: BaseRepository<Project>{
     fun existsByNameAndOrganizationIdAndDeletedFalse(name: String, organizationId: Long): Boolean
-
     fun findAllByOrganizationIdAndDeletedFalse(organizationId: Long): List<Project>
     fun findAllByDeletedFalse(): List<Project>
 }
@@ -74,7 +73,6 @@ interface ProjectRepository: BaseRepository<Project>{
 @Repository
 interface BoardRepository : BaseRepository<Board> {
     fun existsByNameAndProjectIdAndDeletedFalse(name: String, projectId: Long): Boolean
-
     fun findAllByProjectIdAndDeletedFalse(projectId: Long): List<Board>
 }
 
@@ -91,7 +89,6 @@ interface TaskStateRepository : BaseRepository<TaskState> {
       and b.deleted = false
 """)
     fun findByCodeAndBoardId(@Param("code") code: String, @Param("boardId") boardId: Long): TaskState?
-
     @Modifying
     @Transactional
     @Query("""
@@ -102,21 +99,18 @@ interface TaskStateRepository : BaseRepository<TaskState> {
       and ts.deleted = false
 """)
     fun incrementPositions(boardId: Long, from: Int)
-
     @Query("""
     select ts from TaskState ts 
     where ts.board.id = :boardId and ts.position < :pos
     order by ts.position desc limit 1
 """)
     fun findPrev(boardId: Long, pos: Int): TaskState?
-
     @Query("""
     select ts from TaskState ts 
     where ts.board.id = :boardId and ts.position > :pos
     order by ts.position asc limit 1
 """)
     fun findNext(boardId: Long, pos: Int): TaskState?
-
     @Modifying
     @Transactional
     @Query("""
@@ -127,12 +121,9 @@ interface TaskStateRepository : BaseRepository<TaskState> {
       and ts.deleted = false
 """)
     fun decrementPositions(boardId: Long, deletedPosition: Int)
-
     @Query("SELECT MAX(t.position) FROM TaskState t WHERE t.board.id = :boardId AND t.deleted = false")
     fun findMaxPositionByBoardId(boardId: Long): Int?
-
     fun findByCodeAndBoardIdAndDeletedFalse(code: String, boardId: Long): TaskState?
-
     fun existsByNameAndBoardIdAndDeletedFalse(name: String, boardId: Long): Boolean
     fun existsByCodeAndBoardIdAndDeletedFalse(code: String, boardId: Long): Boolean
 }
@@ -143,21 +134,17 @@ interface TaskRepository : BaseRepository<Task> {
     @Transactional
     @Query("UPDATE Task t SET t.deleted = true WHERE t.id IN :taskIds AND t.deleted = false")
     fun trashAllByIds(taskIds: List<Long>)
-
     fun existsByNameAndBoardIdAndDeletedFalse(name: String, boardId: Long): Boolean
-
     fun findAllByBoardIdAndDeletedFalse(boardId: Long): List<Task>
 }
 
 @Repository
 interface AccountTaskRepository: BaseRepository<AccountTask> {
     fun existsByTaskIdAndLocalNumberAndDeletedFalse(taskId: Long, localNumber: Long): Boolean
-
     @Modifying
     @Transactional
     @Query("UPDATE AccountTask a SET a.deleted = true WHERE a.task.id IN :taskIds AND a.deleted = false")
     fun trashAllByTaskIds(taskIds: List<Long>)
-
     fun findAllByTaskIdInAndDeletedFalse(taskIds: List<Long>): List<AccountTask>
     fun findByTaskIdAndLocalNumberAndDeletedFalse(taskId: Long, localNumber: Long): AccountTask?
     fun findAllByTaskIdAndDeletedFalse(taskId: Long): List<AccountTask>

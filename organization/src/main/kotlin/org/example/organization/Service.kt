@@ -87,6 +87,7 @@ interface EmployeeService{
     fun getEmpLocalNumber(localEmpRequest: LocalEmpRequest): EmployeeResponse
 
     fun getAllEmployeesCurrenOrg():List<EmployeeResponse>
+    fun existsEmployee(existsEmployee: ExistsEmployee): Boolean
 }
 
 @Service
@@ -217,6 +218,18 @@ class EmployeeServiceImpl(
         return employees.map {
             employee -> employeeMapper.toDto(employee)
         }
+    }
+
+    override fun existsEmployee(existsEmployee: ExistsEmployee): Boolean {
+        val organization = organizationRepository.findByIdAndActive(existsEmployee.orgId, true)
+            ?:throw OrganizationNotFoundException()
+        val employeeLocalNumbers = existsEmployee.employeeLocalNumbers
+        employeeLocalNumbers.map { employeeLocalNumber->
+           val exists = employeeRepository.existsByLocalNumberAndOrganization(employeeLocalNumber, organization)
+            if (!exists)
+                throw EmployeeNotFoundException()
+        }
+        return true
     }
 
 

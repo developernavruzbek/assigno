@@ -358,16 +358,58 @@ class TaskServiceImpl(
     private val boardRepository: BoardRepository,
     private val accountTaskService: AccountTaskService,
     private val accountTaskRepository: AccountTaskRepository,
-    private val organizationClient: OrganizationClient
+    private val organizationClient: OrganizationClient,
 ) : TaskService {
-
+/*
     @Transactional
     override fun create(request: TaskCreateRequest): TaskResponse {
         val board = getBoard(request.boardId)
         if (board.project.organizationId != currentOrgId())
             throw ProjectNotFoundException("This organization does not have this project")
 
+        validateTaskUniqueness(request.name, board.id!!)
+        val defaultState = getDefaultState(board.id!!)
+        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
 
+        val task = buildTask(request, board, defaultState, emp.localNumber)
+
+        val saved = taskRepository.save(task)
+        if (request.employees!=null){
+            organizationClient.existsEmployee(ExistsEmployee(request.employees, currentOrgId()!!))
+
+            request.employees.map { employeeLocalNumber->
+                accountTaskService.assignAccountToTask()
+
+
+                /*                accountTaskRepository.save(AccountTask(
+                    localNumber = employeeLocalNumber,
+                    task = task))
+
+                 */
+            }
+
+        }
+        /*
+        val allEmployee = accountTaskService.getAllEmployee(saved.id!!).toMutableList()
+        allEmployee.add(emp.localNumber)
+
+         */
+        taskActionService.log(
+            task = saved,
+            type = TaskActionType.CREATED,
+            comment = "New Task created",
+            // employeeLocalNumbers = allEmployee
+        )
+                if (request.employees!=null)
+                    return taskMapper.toDto(saved,request.employees.toMutableList())
+        return taskMapper.toDto(saved,mutableListOf())
+    }
+*/
+
+    @Transactional
+    override fun create(request: TaskCreateRequest): TaskResponse {
+
+        val board = getBoard(request.boardId)
         validateTaskUniqueness(request.name, board.id!!)
         val defaultState = getDefaultState(board.id!!)
         val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
@@ -375,19 +417,29 @@ class TaskServiceImpl(
         val task = buildTask(request, board, defaultState, emp.localNumber)
         val saved = taskRepository.save(task)
 
-        val allEmployee = accountTaskService.getAllEmployee(saved.id!!).toMutableList()
-        allEmployee.add(emp.localNumber)
-
+        // Task yaratilgan log → Faqat ownerga xabar boradi
         taskActionService.log(
             task = saved,
             type = TaskActionType.CREATED,
-            comment = "New Task created",
-            // employeeLocalNumbers = allEmployee
+            comment = "New task created"
         )
 
-        return taskMapper.toDto(saved, mutableListOf())
-    }
+        // AGAR employees bo‘lsa → assignAccountToTask orqali biriktiramiz
+        if (!request.employees.isNullOrEmpty()) {
+            accountTaskService.assignAccountToTask(
+                AssignAccountToTaskRequest(
+                    taskId = saved.id!!,
+                    localNumbers = request.employees
+                )
+            )
+        }
 
+        val assignedLocalNumbers = accountTaskRepository
+            .findAllByTaskIdAndDeletedFalse(saved.id!!)
+            .map { it.localNumber }
+
+        return taskMapper.toDto(saved, assignedLocalNumbers.toMutableList())
+    }
     override fun getById(taskId: Long): TaskResponse {
         val task = getByIdOrThrow(taskId)
         val assigns = accountTaskService.getAccountIdsByTaskId(taskId)
@@ -581,11 +633,13 @@ class AccountTaskServiceImpl(
     private val accountTaskRepository: AccountTaskRepository,
     private val taskRepository: TaskRepository,
     private val taskActionService: TaskActionService,
-    private val organizationClient: OrganizationClient
+    private val organizationClient: OrganizationClient,
+    private val userClient: UserClient
 ) : AccountTaskService {
-
+/*
     @Transactional
     override fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse {
+
         //  println("1 =========================================")
         // checkPosition(organizationClient)
         // println("2 ====================")
@@ -599,11 +653,36 @@ class AccountTaskServiceImpl(
              throw ForbiddenException("You can't disallow account, you aren't the task owner")
          }
   */
-        val accountTask = checkAndBuild(request)
-        val saved = accountTaskRepository.saveAndRefresh(accountTask)
-        val employeeLocal = organizationClient.getEmployeeLocal(LocalEmpRequest(saved.localNumber, currentOrgId()!!))
+
+        val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
+            ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
+
+        val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+
+        if (task.ownerLocalNumber != emp.localNumber)
+            throw ForbiddenException("You can't assign, you aren't task owner")
+                //  val accountTask = checkAndBuild(request)
+
+        organizationClient.existsEmployee(ExistsEmployee(request.localNumbers, currentOrgId()!!))
+
+        request.localNumbers.map { localNumber->
+            if (accountTaskRepository.existsByTaskIdAndLocalNumberAndDeletedFalse(request.taskId, localNumber))
+                throw AccountAlreadyAssignedException(
+                    "Account ${localNumber} is already assigned to task ${request.taskId}"
+                )
+        }
+
+        request.localNumbers.map { localNumber->
+            accountTaskRepository.save(AccountTask(
+                localNumber = localNumber,
+                task = task
+            ))
+        }
+
+        //val saved = accountTaskRepository.saveAndRefresh(accountTask)
+       // val employeeLocal = organizationClient.getEmployeeLocal(LocalEmpRequest(saved.localNumber, currentOrgId()!!))
         taskActionService.log(
-            task = saved.task,
+            task = task,
             type = TaskActionType.ASSIGNED,
             newValue = employeeLocal.userId.toString(),
             //    employeeIds = getAllEmployee(saved.task.id!!)
@@ -611,7 +690,7 @@ class AccountTaskServiceImpl(
 
         return AccountTaskResponse(localNumber = saved.localNumber)
     }
-
+/*
     private fun checkAndBuild(request: AssignAccountToTaskRequest): AccountTask {
         val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
             ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
@@ -622,17 +701,62 @@ class AccountTaskServiceImpl(
             throw ForbiddenException("You can't assign, you aren't task owner")
         //  println("AccountId :${request.accountId}")
         //  organizationClient.getEmp(EmpRequest(request.accountId, currentOrgId()!!))
-        organizationClient.getEmployeeLocal(LocalEmpRequest(request.localNumber, currentOrgId()!!))
+      //  organizationClient.getEmployeeLocal(LocalEmpRequest(request.localNumber, currentOrgId()!!))
         //  println("AccountId: ${request.accountId}")
 
-        if (accountTaskRepository.existsByTaskIdAndLocalNumberAndDeletedFalse(request.taskId, request.localNumber))
-            throw AccountAlreadyAssignedException(
-                "Account ${request.localNumber} is already assigned to task ${request.taskId}"
-            )
+         request.localNumbers.map { localNumber->
+             if (accountTaskRepository.existsByTaskIdAndLocalNumberAndDeletedFalse(request.taskId, localNumber))
+                 throw AccountAlreadyAssignedException(
+                     "Account ${localNumber} is already assigned to task ${request.taskId}"
+                 )
+         }
 
-        return AccountTask(localNumber = request.localNumber, task = task)
+        return AccountTask(localNumber = request.localNumbers, task = task)
     }
 
+ */
+
+
+ */
+@Transactional
+override fun assignAccountToTask(request: AssignAccountToTaskRequest): AccountTaskResponse {
+
+    val task = taskRepository.findByIdAndDeletedFalse(request.taskId)
+        ?: throw TaskNotFoundException("Task not found with id: ${request.taskId}")
+
+    val emp = organizationClient.getEmp(EmpRequest(userId(), currentOrgId()!!))
+
+    if (task.ownerLocalNumber != emp.localNumber)
+        throw ForbiddenException("You can't assign, you aren't task owner")
+
+
+    organizationClient.existsEmployee(ExistsEmployee(request.localNumbers, currentOrgId()!!))
+
+
+    request.localNumbers.forEach { local ->
+        if (accountTaskRepository.existsByTaskIdAndLocalNumberAndDeletedFalse(task.id!!, local))
+            throw AccountAlreadyAssignedException("Account $local already assigned")
+    }
+
+
+    request.localNumbers.forEach { local ->
+        accountTaskRepository.save(AccountTask(localNumber = local, task = task))
+    }
+
+    val names = request.localNumbers.joinToString(", ") { local ->
+        val empLocal = organizationClient.getEmployeeLocal(LocalEmpRequest(local, currentOrgId()!!))
+        userClient.getUserById(empLocal.userId).fullName
+    }
+
+    taskActionService.log(
+        task = task,
+        type = TaskActionType.ASSIGNED,
+        newValue = names,
+        comment = "Bir nechta mas’ul biriktirildi"
+    )
+
+    return AccountTaskResponse(localNumber = -1)
+}
     override fun getAccountIdsByTaskId(taskId: Long): MutableList<Long> =
         accountTaskRepository.findAllByTaskIdAndDeletedFalse(taskId)
             .map { it.localNumber }
@@ -899,6 +1023,8 @@ class TaskActionServiceImpl(
         sb.append("🕒 Vaqt: $now\n\n")
 
         when (type) {
+            /*
+
             TaskActionType.ASSIGNED -> {
                 val assignedUserId = newValue?.toLongOrNull()
                 val assignedUserName = assignedUserId?.let {
@@ -910,7 +1036,10 @@ class TaskActionServiceImpl(
                 } ?: "Noma'lum"
                 sb.append("👥 Mas'ul o‘zgarishi: ✅ $assignedUserName topshiriqqa biriktirildi\n")
             }
-
+    */   TaskActionType.ASSIGNED -> {
+            sb.append("👥 Mas’ullar biriktirildi:\n")
+            sb.append("✅ $newValue\n")
+        }
             TaskActionType.UNASSIGNED -> {
                 val unassignedUserId = oldValue?.toLongOrNull()
                 val unassignedUserName = unassignedUserId?.let {

@@ -69,5 +69,6 @@ interface EmployeeRepository : BaseRepository<Employee> {
     fun findByIdAndOrganization(id: Long, organization: Organization): Employee?
     fun findByLocalNumberAndOrganization(localNumber: Long, organization: Organization): Employee?
     fun findTopByOrganizationOrderByLocalNumberDesc(organization: Organization): Employee?
+    fun existsByLocalNumberAndOrganization(localNumber: Long, organization: Organization): Boolean
 
 }

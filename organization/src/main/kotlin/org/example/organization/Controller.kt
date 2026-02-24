@@ -85,4 +85,7 @@ class EmployeeController(
     @GetMapping("/all/current-organization")
     fun getAllEmployeeCurrentOrganization() = employeeService.getAllEmployeesCurrenOrg()
 
+    @PostMapping("/exists")
+    fun existsEmployee(@RequestBody existsEmployee: ExistsEmployee ) = employeeService.existsEmployee(existsEmployee)
+
 }

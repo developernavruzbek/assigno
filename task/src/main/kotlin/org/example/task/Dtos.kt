@@ -127,6 +127,8 @@ data class TaskCreateRequest(
 
     @field:Positive
     val boardId: Long,
+
+    val employees: List<Long>?
 )
 
 data class TaskUpdateRequest(
@@ -159,7 +161,7 @@ data class TaskResponse(
 
 data class AssignAccountToTaskRequest(
     @field:Positive
-    val localNumber: Long,
+    val localNumbers: List<Long>,
 
     @field:Positive
     val taskId: Long
@@ -201,4 +203,9 @@ data class OrganizationResponse(
 data class UserResponse(
     val id: Long,
     val fullName: String,
+)
+
+data class ExistsEmployee(
+    val employeeLocalNumbers: List<Long>,
+    val orgId:Long
 )

@@ -26,6 +26,10 @@ interface OrganizationClient {
 
     @GetMapping("/org/{orgId}")
     fun getOne(@PathVariable("orgId") orgId: Long): OrganizationResponse
+
+    @PostMapping("employee/exists")
+    fun existsEmployee(@RequestBody existsEmployee: ExistsEmployee ): Boolean
+
 }
 
 @FeignClient(

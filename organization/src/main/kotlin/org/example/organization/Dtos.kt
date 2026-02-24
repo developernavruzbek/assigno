@@ -141,3 +141,8 @@ data class LocalEmpRequest(
     val localNumber: Long,
     val orgId:Long
 )
+
+data class ExistsEmployee(
+    val employeeLocalNumbers: List<Long>,
+    val orgId:Long
+)
